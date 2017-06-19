@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="Eadom&#39;s Blog">
-    <title>Archives - Eadom&#39;s Blog</title>
+    <title>QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup - Eadom&#39;s Blog</title>
     <meta name="author" content="Eadom">
     
     
@@ -15,12 +15,24 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta property="og:type" content="blog">
-<meta property="og:title" content="Eadom's Blog">
-<meta property="og:url" content="http://blog.eadom.com/archives/index.html">
+    <meta name="description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
+You should read VM escape - QEMU Case Study before reading this writeup.
+Challenge">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
+<meta property="og:url" content="http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/index.html">
 <meta property="og:site_name" content="Eadom's Blog">
+<meta property="og:description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
+You should read VM escape - QEMU Case Study before reading this writeup.
+Challenge">
+<meta property="og:image" content="https://i.imgur.com/tixAsK6.png">
+<meta property="og:updated_time" content="2017-06-15T16:11:15.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Eadom's Blog">
+<meta name="twitter:title" content="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
+<meta name="twitter:description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
+You should read VM escape - QEMU Case Study before reading this writeup.
+Challenge">
+<meta name="twitter:image" content="https://i.imgur.com/tixAsK6.png">
     
     
         
@@ -221,21 +233,16 @@
                         hasCoverMetaIn
                         ">
                 
-    <section class="postShorten-group main-content-wrap">
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
     
     
-    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                            QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup
+        </h1>
+    
+    <div class="post-meta">
     <time itemprop="datePublished" datetime="2017-06-16T00:04:14+08:00">
 	
 		    Jun 16, 2017
@@ -244,10 +251,11 @@
     
 </div>
 
-            </div>
-            
-                <div class="postShorten-content" itemprop="articleBody">
-                    <p>It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.</p>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.</p>
 <p>You should read <a href="http://www.phrack.org/papers/vm-escape-qemu-case-study.html" target="_blank" rel="external">VM escape - QEMU Case Study</a> before reading this writeup.</p>
 <h2 id="Challenge"><a href="#Challenge" class="headerlink" title="Challenge"></a>Challenge</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">challenge</div><div class="line">├── dependency</div><div class="line">│   ├── libnettle.so.6.2</div><div class="line">│   └── usr</div><div class="line">│       └── local</div><div class="line">│           └── share</div><div class="line">│               └── qemu</div><div class="line">│                   ├── bios-256k.bin</div><div class="line">│                   ├── efi-e1000.rom</div><div class="line">│                   ├── kvmvapic.bin</div><div class="line">│                   ├── linuxboot_dma.bin</div><div class="line">│                   └── vgabios-stdvga.bin</div><div class="line">├── launch.sh</div><div class="line">├── qemu-system-x86_64</div><div class="line">├── rootfs.cpio</div><div class="line">└── vmlinuz-4.8.0-52-generic</div></pre></td></tr></table></figure>
 <p>There is a <em>qemu-system-x86_64</em> binary with a launch script, a linux kernel, a initramfs and some dependencies.</p>
@@ -296,113 +304,80 @@
 <p><a href="https://gist.github.com/Eadom/3d5600b6931fbf328ffb20f10eeb3a52" target="_blank" rel="external">Exploit script</a></p>
 <p>Thanks for Atum’s help.</p>
 
-                    
-                        
-                    
-                    
-                        <p>
-                            <a href="/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/#post-footer" class="postShorten-excerpt_link link">
-                                Comment and share
-                            </a>
-                        </p>
-                    
-                </div>
             
         </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
         
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/" data-tooltip="Pwntools Quick Reference Guide">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
             
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/uncategorized/pwntools-quick-reference-guide/">
-                            Pwntools Quick Reference Guide
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2016-03-02T18:33:29+08:00">
-	
-		    Mar 02, 2016
-    	
-    </time>
-    
-</div>
-
-            </div>
+                <a class="post-action-btn btn btn--default" href="#">
             
-                <div class="postShorten-content" itemprop="articleBody">
-                    <blockquote>
-<p>pwntools is a CTF framework and exploit development library. Written in Python, it is designed for rapid prototyping and development, and intended to make exploit writing as simple as possible.</p>
-</blockquote>
-<h2 id="Context"><a href="#Context" class="headerlink" title="Context"></a>Context</h2><p>Setting the Target Architecture and OS:</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">context(arch=<span class="string">'arm'</span>, os=<span class="string">'linux'</span>, endian=<span class="string">'big'</span>, log_level=<span class="string">'debug'</span>)</div></pre></td></tr></table></figure>
-<h2 id="Log"><a href="#Log" class="headerlink" title="Log"></a>Log</h2><p>It’s similar to <code>logging.Logger</code>.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span>log.info(<span class="string">'Hello, world!'</span>)</div><div class="line">[*] Hello, world!</div></pre></td></tr></table></figure>
-<h2 id="Making-connections"><a href="#Making-connections" class="headerlink" title="Making connections"></a>Making connections</h2><h3 id="New-a-tube"><a href="#New-a-tube" class="headerlink" title="New a tube"></a>New a tube</h3><p>Create a tube instance from a local program or a remote conncetion.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">conn = process(<span class="string">'./pwn'</span>)</div><div class="line">conn = remote(<span class="string">'ftp.debian.org'</span>,<span class="number">21</span>)</div></pre></td></tr></table></figure>
-<h3 id="Comunication"><a href="#Comunication" class="headerlink" title="Comunication"></a>Comunication</h3><h4 id="Send-and-recv"><a href="#Send-and-recv" class="headerlink" title="Send and recv"></a>Send and recv</h4><p>There are many functions to send or recv data via tube.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">recv(numb = <span class="number">4096</span>, timeout = default)</div><div class="line">recvuntil(delims, drop=<span class="keyword">False</span>, timeout = default)</div><div class="line">recvn(numb, timeout = default)</div><div class="line">recvlines(numlines, keepends = <span class="keyword">False</span>, timeout = default)</div><div class="line">recvline(keepends = <span class="keyword">True</span>, timeout = default)</div><div class="line">recvregex(regex, exact = <span class="keyword">False</span>, timeout = default)</div><div class="line">recvrepeat(timeout = default)  <span class="comment"># Receives data until a timeout or EOF is reached.</span></div><div class="line">recvall(self, timeout=Timeout.forever)  <span class="comment"># Receives data until EOF is reached.</span></div><div class="line">...</div><div class="line"></div><div class="line">send(data)</div><div class="line">sendline(line)</div><div class="line">...</div><div class="line"></div><div class="line">interactive()</div></pre></td></tr></table></figure>
-<h4 id="Listen"><a href="#Listen" class="headerlink" title="Listen"></a>Listen</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">l = listen(port=<span class="number">2333</span>, bindaddr = <span class="string">"0.0.0.0"</span>)</div><div class="line">c = l.wait_for_connection()</div><div class="line">c.recv()</div></pre></td></tr></table></figure>
-<h2 id="ELF-Manipulation"><a href="#ELF-Manipulation" class="headerlink" title="ELF Manipulation"></a>ELF Manipulation</h2><p>Stop hard-coding things! Look them up at runtime with <code>pwnlib.elf</code>.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span>e = ELF(<span class="string">'/bin/cat'</span>)</div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.address) </div><div class="line"><span class="number">0x400000</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.symbols[<span class="string">'write'</span>]) </div><div class="line"><span class="number">0x401680</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.got[<span class="string">'write'</span>]) </div><div class="line"><span class="number">0x60b070</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.plt[<span class="string">'write'</span>]) </div><div class="line"><span class="number">0x401680</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>e.address = <span class="number">0x0</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.symbols[<span class="string">'write'</span>]) </div><div class="line"><span class="number">0x1680</span></div></pre></td></tr></table></figure>
-<p>You can even patch and save the files.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span>e = ELF(<span class="string">'/bin/cat'</span>)</div><div class="line"><span class="meta">&gt;&gt;&gt; </span>e.read(e.address+<span class="number">1</span>, <span class="number">3</span>)</div><div class="line"><span class="string">'ELF'</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>e.asm(e.address, <span class="string">'ret'</span>)</div><div class="line"><span class="meta">&gt;&gt;&gt; </span>e.save(<span class="string">'/tmp/quiet-cat'</span>)</div><div class="line"><span class="meta">&gt;&gt;&gt; </span>disasm(file(<span class="string">'/tmp/quiet-cat'</span>,<span class="string">'rb'</span>).read(<span class="number">1</span>))</div></pre></td></tr></table></figure>
-<h2 id="Debug-with-gdb"><a href="#Debug-with-gdb" class="headerlink" title="Debug with gdb"></a>Debug with gdb</h2><p><code>pwnlib.gdb.attach()</code> starts GDB in a <strong>new terminal</strong> and attach to target.</p>
-<p>Target can be a process, (addr, port), or ssh channel.</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">p = process(<span class="string">'./helloworld'</span>)</div><div class="line">gdb.attach(p, execute=<span class="string">"b *0x4000000"</span>)  <span class="comment"># execute:GDB script to run after attaching.</span></div><div class="line"></div><div class="line">gdb.attach((<span class="string">'127.0.0.1'</span>, <span class="number">8765</span>))  <span class="comment"># attach to remote gdb server</span></div><div class="line"></div><div class="line">s = ssh(host=<span class="string">'rpi'</span>, user=<span class="string">'pi'</span>)</div><div class="line">conn = s.process(<span class="string">'/tmp/helloworld'</span>)</div><div class="line">gdb.attach(conn)  <span class="comment"># start gdb on remote server via ssh</span></div></pre></td></tr></table></figure>
-<p>If you want to start GDB in a split window in tmux:</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">context.terminal = [<span class="string">'tmux'</span>, <span class="string">'splitw'</span>, <span class="string">'-h'</span>]</div><div class="line">context.terminal = [<span class="string">'tmux'</span>, <span class="string">'splitw'</span>, <span class="string">'-v'</span>]</div></pre></td></tr></table></figure>
-<h2 id="Fmtstr"><a href="#Fmtstr" class="headerlink" title="Fmtstr"></a>Fmtstr</h2><p><code>pwnlib.fmtstr.fmtstr_payload(offset, writes, numbwritten=0, write_size=&#39;byte&#39;)</code></p>
-<p>It can generate payload for 32 or 64 bits architectures. The size of the addr is taken from <code>context.bits</code></p>
-<p>Parameters:    </p>
-<ul>
-<li>offset (int) – the first formatter’s offset you control</li>
-<li>writes (dict) – dict with addr, value {addr: value, addr2: value2}</li>
-<li>numbwritten (int) – number of byte already written by the printf function</li>
-<li>write_size (str) – must be byte, short or int. Tells if you want to write byte by byte, short by short or int by int (hhn, hn or n)</li>
-</ul>
-<h2 id="DynELF"><a href="#DynELF" class="headerlink" title="DynELF"></a>DynELF</h2><p><code>pwnlib.dynelf</code> — Resolving remote functions using leaks</p>
-<p>Resolve symbols in loaded, dynamically-linked ELF binaries. Given a function which can leak data at an arbitrary address, any symbol in any loaded library can be resolved.</p>
-<p>This is an example in the document:</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Assume a process or remote connection</span></div><div class="line">p = process(<span class="string">'./pwnme'</span>)</div><div class="line"></div><div class="line"><span class="comment"># Declare a function that takes a single address, and</span></div><div class="line"><span class="comment"># leaks at least one byte at that address.</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">leak</span><span class="params">(address)</span>:</span></div><div class="line">    data = p.read(address, <span class="number">4</span>)</div><div class="line">    log.debug(<span class="string">"%#x =&gt; %s"</span> % (address, (data <span class="keyword">or</span> <span class="string">''</span>).encode(<span class="string">'hex'</span>)))</div><div class="line">    <span class="keyword">return</span> data</div><div class="line"></div><div class="line"><span class="comment"># For the sake of this example, let's say that we</span></div><div class="line"><span class="comment"># have any of these pointers.  One is a pointer into</span></div><div class="line"><span class="comment"># the target binary, the other two are pointers into libc</span></div><div class="line">main   = <span class="number">0xfeedf4ce</span></div><div class="line">libc   = <span class="number">0xdeadb000</span></div><div class="line">system = <span class="number">0xdeadbeef</span></div><div class="line"></div><div class="line"><span class="comment"># With our leaker, and a pointer into our target binary,</span></div><div class="line"><span class="comment"># we can resolve the address of anything.</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment"># We do not actually need to have a copy of the target</span></div><div class="line"><span class="comment"># binary for this to work.</span></div><div class="line">d = DynELF(leak, main)</div><div class="line"><span class="keyword">assert</span> d.lookup(<span class="keyword">None</span>,     <span class="string">'libc'</span>) == libc</div><div class="line"><span class="keyword">assert</span> d.lookup(<span class="string">'system'</span>, <span class="string">'libc'</span>) == system</div><div class="line"></div><div class="line"><span class="comment"># However, if we *do* have a copy of the target binary,</span></div><div class="line"><span class="comment"># we can speed up some of the steps.</span></div><div class="line">d = DynELF(leak, main, elf=ELF(<span class="string">'./pwnme'</span>))</div><div class="line"><span class="keyword">assert</span> d.lookup(<span class="keyword">None</span>,     <span class="string">'libc'</span>) == libc</div><div class="line"><span class="keyword">assert</span> d.lookup(<span class="string">'system'</span>, <span class="string">'libc'</span>) == system</div><div class="line"></div><div class="line"><span class="comment"># Alternately, we can resolve symbols inside another library,</span></div><div class="line"><span class="comment"># given a pointer into it.</span></div><div class="line">d = DynELF(leak, libc + <span class="number">0x1234</span>)</div><div class="line"><span class="keyword">assert</span> d.lookup(<span class="string">'system'</span>)      == system</div></pre></td></tr></table></figure>
-<h2 id="Utility"><a href="#Utility" class="headerlink" title="Utility"></a>Utility</h2><h3 id="Generation-of-unique-sequences"><a href="#Generation-of-unique-sequences" class="headerlink" title="Generation of unique sequences"></a>Generation of unique sequences</h3><p><code>pwnlib.util.cyclic.cyclic(length = None, alphabet = string.ascii_lowercase, n = 4)</code></p>
-<p><code>pwnlib.util.cyclic.cyclic_find(subseq, alphabet = string.ascii_lowercase, n = None)</code></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span>cyclic(<span class="number">20</span>)</div><div class="line"><span class="string">'aaaabaaacaaadaaaeaaa'</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>cyclic(alphabet = <span class="string">"ABC"</span>, n = <span class="number">3</span>)</div><div class="line"><span class="string">'AAABAACABBABCACBACCBBBCBCCC'</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>cyclic_find(cyclic(alphabet = <span class="string">"ABC"</span>, n = <span class="number">3</span>)[<span class="number">3</span>:<span class="number">6</span>], alphabet = <span class="string">"ABC"</span>, n = <span class="number">3</span>)</div><div class="line"><span class="number">3</span></div></pre></td></tr></table></figure>
-<h3 id="Assembly-and-Disassembly"><a href="#Assembly-and-Disassembly" class="headerlink" title="Assembly and Disassembly"></a>Assembly and Disassembly</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span>asm(<span class="string">'mov eax, 0'</span>).encode(<span class="string">'hex'</span>)</div><div class="line"><span class="string">'b800000000'</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> disasm(<span class="string">'6a0258cd80ebf9'</span>.decode(<span class="string">'hex'</span>))</div><div class="line">   <span class="number">0</span>:   <span class="number">6</span>a <span class="number">02</span>                   push   <span class="number">0x2</span></div><div class="line">   <span class="number">2</span>:   <span class="number">58</span>                      pop    eax</div><div class="line">   <span class="number">3</span>:   cd <span class="number">80</span>                   int    <span class="number">0x80</span></div><div class="line">   <span class="number">5</span>:   eb f9                   jmp    <span class="number">0x0</span></div></pre></td></tr></table></figure>
-<h3 id="Packing-Integers"><a href="#Packing-Integers" class="headerlink" title="Packing Integers"></a>Packing Integers</h3><p><code>p8()</code>, <code>p16()</code>, <code>p32()</code>, <code>p64()</code>, <code>u8()</code>, <code>u16()</code>, <code>u32()</code>, <code>u64()</code></p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">import</span> struct</div><div class="line"><span class="meta">&gt;&gt;&gt; </span>p32(<span class="number">0xdeadbeef</span>) == struct.pack(<span class="string">'I'</span>, <span class="number">0xdeadbeef</span>)</div><div class="line"><span class="keyword">True</span></div><div class="line"><span class="meta">&gt;&gt;&gt; </span>leet = <span class="string">'37130000'</span>.decode(<span class="string">'hex'</span>)</div><div class="line"><span class="meta">&gt;&gt;&gt; </span>u32(<span class="string">'abcd'</span>) == struct.unpack(<span class="string">'I'</span>, <span class="string">'abcd'</span>)[<span class="number">0</span>]</div><div class="line"><span class="keyword">True</span></div></pre></td></tr></table></figure>
-<p><code>pwnlib.util.packing.pack/unpack(number, word_size = None, endianness = None, sign = None, **kwargs)</code></p>
-
-                    
-                        
-                    
-                    
-                        <p>
-                            <a href="/uncategorized/pwntools-quick-reference-guide/#post-footer" class="postShorten-excerpt_link link">
-                                Comment and share
-                            </a>
-                        </p>
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    <div class="pagination-bar">
-    <ul class="pagination">
-        
-        
-        <li class="pagination-number">page 1 of 1</li>
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
     </ul>
 </div>
 
-</section>
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
 
 
 
@@ -413,6 +388,90 @@
 </footer>
 
             </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/" data-tooltip="Pwntools Quick Reference Guide">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
             
         </div>
         
@@ -527,6 +586,25 @@
         <!--SCRIPTS-->
 <script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
 <!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/';
+                 
+                    this.page.identifier = 'uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'eadomblog';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
 
 
 
