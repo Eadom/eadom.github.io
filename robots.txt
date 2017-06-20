@@ -5,3 +5,4 @@ Allow: /all-tags/
 Allow: /all-categories/
 
 Sitemap: https://blog.eadom.net/sitemap.xml
+Sitemap: https://blog.eadom.net/baidusitemap.xml
