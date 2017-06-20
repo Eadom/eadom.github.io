@@ -4,9 +4,9 @@
   <subtitle>NO PWN NO FUN</subtitle>
   <link href="/atom.xml" rel="self"/>
   
-  <link href="http://blog.eadom.com/"/>
+  <link href="https://blog.eadom.com/"/>
   <updated>2017-06-15T16:11:15.000Z</updated>
-  <id>http://blog.eadom.com/</id>
+  <id>https://blog.eadom.com/</id>
   
   <author>
     <name>Eadom</name>
@@ -17,8 +17,8 @@
   
   <entry>
     <title>QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup</title>
-    <link href="http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/"/>
-    <id>http://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/</id>
+    <link href="https://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/"/>
+    <id>https://blog.eadom.com/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/</id>
     <published>2017-06-15T16:04:14.000Z</published>
     <updated>2017-06-15T16:11:15.000Z</updated>
     
@@ -84,8 +84,8 @@
   
   <entry>
     <title>Pwntools Quick Reference Guide</title>
-    <link href="http://blog.eadom.com/uncategorized/pwntools-quick-reference-guide/"/>
-    <id>http://blog.eadom.com/uncategorized/pwntools-quick-reference-guide/</id>
+    <link href="https://blog.eadom.com/uncategorized/pwntools-quick-reference-guide/"/>
+    <id>https://blog.eadom.com/uncategorized/pwntools-quick-reference-guide/</id>
     <published>2016-03-02T10:33:29.000Z</published>
     <updated>2017-06-15T16:09:43.000Z</updated>
     
@@ -140,7 +140,7 @@
     </summary>
     
     
-      <category term="tools" scheme="http://blog.eadom.com/tags/tools/"/>
+      <category term="tools" scheme="https://blog.eadom.com/tags/tools/"/>
     
   </entry>
   
