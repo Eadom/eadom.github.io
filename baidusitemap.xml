@@ -4,15 +4,24 @@
 
     
   <url>
-    <loc>https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/</loc>
-    <lastmod>2017-06-15T16:11:15.000Z</lastmod>
+    <loc>https://blog.eadom.net/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/</loc>
+    <lastmod>2017-06-21T08:10:47.000Z</lastmod>
     <data>
         <display>
         <title>QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup</title>
         <pubTime>2017-06-15T16:04:14.000Z</pubTime>
         
+        <tag>writeup</tag>
+         
+        <tag>qemu</tag>
+         
+        <tag>0ctf</tag>
+         
          
            
+             
+              <breadCrumb title="writeups" url="https://blog.eadom.net/categories/writeups/"/>
+          
         </display>
     </data>
     </url>

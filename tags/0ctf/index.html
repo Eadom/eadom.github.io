@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="Eadom&#39;s Blog">
-    <title>QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup - Eadom&#39;s Blog</title>
+    <title>Tag: 0ctf - Eadom&#39;s Blog</title>
     <meta name="author" content="Eadom">
     
     
@@ -15,24 +15,12 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
-You should read VM escape - QEMU Case Study before reading this writeup.
-Challenge">
-<meta property="og:type" content="blog">
-<meta property="og:title" content="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
-<meta property="og:url" content="https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/index.html">
+    <meta property="og:type" content="blog">
+<meta property="og:title" content="Eadom's Blog">
+<meta property="og:url" content="https://blog.eadom.net/tags/0ctf/index.html">
 <meta property="og:site_name" content="Eadom's Blog">
-<meta property="og:description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
-You should read VM escape - QEMU Case Study before reading this writeup.
-Challenge">
-<meta property="og:image" content="https://i.imgur.com/tixAsK6.png">
-<meta property="og:updated_time" content="2017-06-15T16:11:15.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
-<meta name="twitter:description" content="It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.
-You should read VM escape - QEMU Case Study before reading this writeup.
-Challenge">
-<meta name="twitter:image" content="https://i.imgur.com/tixAsK6.png">
+<meta name="twitter:title" content="Eadom's Blog">
     
     
         
@@ -233,29 +221,39 @@ Challenge">
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    <section class="postShorten-group main-content-wrap">
     
     
-        <div class="post-header main-content-wrap text-left">
-    
-        <h1 class="post-title" itemprop="headline">
-            QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup
-        </h1>
-    
-    <div class="post-meta">
+    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title" itemprop="headline">
+                    
+                        <a class="link-unstyled" href="/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                            QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
     <time itemprop="datePublished" datetime="2017-06-16T00:04:14+08:00">
 	
 		    Jun 16, 2017
     	
     </time>
     
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
 </div>
 
-</div>
-    
-    <div class="post-content markdown" itemprop="articleBody">
-        <div class="main-content-wrap">
-            <p>It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.</p>
+            </div>
+            
+                <div class="postShorten-content" itemprop="articleBody">
+                    <p>It’s a great challenge to get familiar with QEMU escape. We are going to exploit QEMU via a custom vulnerable device.</p>
 <p>You should read <a href="http://www.phrack.org/papers/vm-escape-qemu-case-study.html" target="_blank" rel="external">VM escape - QEMU Case Study</a> before reading this writeup.</p>
 <h2 id="Challenge"><a href="#Challenge" class="headerlink" title="Challenge"></a>Challenge</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">challenge</div><div class="line">├── dependency</div><div class="line">│   ├── libnettle.so.6.2</div><div class="line">│   └── usr</div><div class="line">│       └── local</div><div class="line">│           └── share</div><div class="line">│               └── qemu</div><div class="line">│                   ├── bios-256k.bin</div><div class="line">│                   ├── efi-e1000.rom</div><div class="line">│                   ├── kvmvapic.bin</div><div class="line">│                   ├── linuxboot_dma.bin</div><div class="line">│                   └── vgabios-stdvga.bin</div><div class="line">├── launch.sh</div><div class="line">├── qemu-system-x86_64</div><div class="line">├── rootfs.cpio</div><div class="line">└── vmlinuz-4.8.0-52-generic</div></pre></td></tr></table></figure>
 <p>There is a <em>qemu-system-x86_64</em> binary with a launch script, a linux kernel, a initramfs and some dependencies.</p>
@@ -304,81 +302,31 @@ Challenge">
 <p><a href="https://gist.github.com/Eadom/3d5600b6931fbf328ffb20f10eeb3a52" target="_blank" rel="external">Exploit script</a></p>
 <p>Thanks for Atum’s help.</p>
 
+                    
+                        
+                    
+                    
+                        <p>
+                            <a href="/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/#post-footer" class="postShorten-excerpt_link link">
+                                Comment and share
+                            </a>
+                        </p>
+                    
+                </div>
             
         </div>
-    </div>
-    <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
-    <nav>
-        <ul class="post-actions post-action-nav">
-            <li class="post-action">
-                
-                    <a class="post-action-btn btn btn--disabled">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
-                </a>
-            </li>
-            <li class="post-action">
-                
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/" data-tooltip="Pwntools Quick Reference Guide">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
-            </li>
-        </ul>
-    </nav>
-    <ul class="post-actions post-action-share">
-        <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-twitter"></i>
-            </a>
-        </li>
+    </article>
+    
+    <div class="pagination-bar">
+    <ul class="pagination">
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
-                </a>
-            </li>
         
-        <li class="post-action">
-            
-                <a class="post-action-btn btn btn--default" href="#">
-            
-                <i class="fa fa-list"></i>
-            </a>
-        </li>
+        <li class="pagination-number">page 1 of 1</li>
     </ul>
 </div>
 
-
-        
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-            
-        
-    </div>
-</article>
-
+</section>
 
 
                 <footer id="footer" class="main-content-wrap">
@@ -388,90 +336,6 @@ Challenge">
 </footer>
 
             </div>
-            
-                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
-                    <div class="post-actions-wrap">
-    <nav>
-        <ul class="post-actions post-action-nav">
-            <li class="post-action">
-                
-                    <a class="post-action-btn btn btn--disabled">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
-                </a>
-            </li>
-            <li class="post-action">
-                
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/" data-tooltip="Pwntools Quick Reference Guide">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
-            </li>
-        </ul>
-    </nav>
-    <ul class="post-actions post-action-share">
-        <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-twitter"></i>
-            </a>
-        </li>
-        
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
-                </a>
-            </li>
-        
-        <li class="post-action">
-            
-                <a class="post-action-btn btn btn--default" href="#">
-            
-                <i class="fa fa-list"></i>
-            </a>
-        </li>
-    </ul>
-</div>
-
-
-                </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
-                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
             
         </div>
         
@@ -553,7 +417,7 @@ Challenge">
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/">
                             <h3 class="media-heading">QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup</h3>
                         </a>
                         <span class="media-meta">
@@ -586,25 +450,6 @@ Challenge">
         <!--SCRIPTS-->
 <script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
 <!--SCRIPTS END-->
-
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://blog.eadom.net/uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/';
-                 
-                    this.page.identifier = 'uncategorized/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'eadomblog';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
-    
 
 
 
