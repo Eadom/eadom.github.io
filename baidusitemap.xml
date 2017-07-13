@@ -4,6 +4,28 @@
 
     
   <url>
+    <loc>https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/</loc>
+    <lastmod>2017-07-10T08:47:44.000Z</lastmod>
+    <data>
+        <display>
+        <title>UCTF2017 初赛 PWN题 Writeup</title>
+        <pubTime>2017-07-10T08:44:39.000Z</pubTime>
+        
+        <tag>writeup</tag>
+         
+        <tag>uctf</tag>
+         
+         
+           
+             
+              <breadCrumb title="writeups" url="https://blog.eadom.net/categories/writeups/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>https://blog.eadom.net/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/</loc>
     <lastmod>2017-06-21T08:10:47.000Z</lastmod>
     <data>
