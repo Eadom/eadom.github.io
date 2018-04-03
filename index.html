@@ -253,7 +253,7 @@
             
                 <div class="postShorten-content" itemprop="articleBody">
                     <h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p><em>zerofs.ko</em> is a driver module of a custom filesystem.<br>The kernel and the module is compiled by randstruct plugin, which I found in the magic string – <code>vermagic=4.13.0 SMP mod_unload modversions</code>RANDSTRUCT_PLUGIN_3c73df5cc8285309b74c8a4caaf831205da45096402d3b1a80caab1d7fa1b03a`.<br><em>run.sh</em> and <em>/init</em> show that the kernel is protected by SMEP, SMAP, KASLR, kptr_restrict and dmesg_restrict.</p>
-<h2 id="zerofs-ko"><a href="#zerofs-ko" class="headerlink" title="zerofs.ko"></a>zerofs.ko</h2><p>I found the module may be modified by <a href="https://github.com/psankar/simplefs" target="_blank" rel="external">simplefs</a> after the game.<br>By reversing <em>zerofs.ko</em>, I knew the blocksize is 4096 bits. The first block of the image is the superblock. It consists of magic, block_size, inode_count and free_blocks bitmap.</p>
+<h2 id="zerofs-ko"><a href="#zerofs-ko" class="headerlink" title="zerofs.ko"></a>zerofs.ko</h2><p>I found the module may be modified from <a href="https://github.com/psankar/simplefs" target="_blank" rel="external">simplefs</a> after the game.<br>By reversing <em>zerofs.ko</em>, I knew the blocksize is 4096 bits. The first block of the image is the superblock. It consists of magic, block_size, inode_count and free_blocks bitmap.</p>
 <img src="/writeups/0ctf-2018-zerofs-writeup/zerofs_super_block.png" alt="zerofs_super_block" title="zerofs_super_block">
 <p>The second block records all of the inodes in an array. <em>ino</em> is inode number, and dno is the block number of the image.</p>
 <img src="/writeups/0ctf-2018-zerofs-writeup/zerofs_inode.png" alt="zerofs_inode" title="zerofs_inode">
@@ -268,6 +268,7 @@
 <p>The last step is to write the CRED. I invoked llseek to set offset to the CRED, and invoked write to modify the CRED, setting uid to 0.</p>
 <p>Here is the <a href="https://gist.github.com/Eadom/29f8627d428a90842a99b2c176d4789a" target="_blank" rel="external">expliot</a></p>
 <img src="/writeups/0ctf-2018-zerofs-writeup/get_flag.png" alt="get_flag" title="get_flag">
+
                     
                         
                     
