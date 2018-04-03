@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://blog.eadom.net/"/>
-  <updated>2018-04-03T13:37:19.000Z</updated>
+  <updated>2018-04-03T13:39:54.000Z</updated>
   <id>https://blog.eadom.net/</id>
   
   <author>
@@ -16,11 +16,11 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>0ctf-2010-zerofs-writeup</title>
+    <title>0CTF2018 zerofs Writeup</title>
     <link href="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/"/>
     <id>https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/</id>
     <published>2018-04-02T16:15:39.000Z</published>
-    <updated>2018-04-03T13:37:19.000Z</updated>
+    <updated>2018-04-03T13:39:54.000Z</updated>
     
     <content type="html"><![CDATA[<h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p><em>zerofs.ko</em> is a driver module of a custom filesystem.<br>The kernel and the module is compiled by randstruct plugin, which I found in the magic string – <code>vermagic=4.13.0 SMP mod_unload modversions</code>RANDSTRUCT_PLUGIN_3c73df5cc8285309b74c8a4caaf831205da45096402d3b1a80caab1d7fa1b03a`.<br><em>run.sh</em> and <em>/init</em> show that the kernel is protected by SMEP, SMAP, KASLR, kptr_restrict and dmesg_restrict.</p>
 <h2 id="zerofs-ko"><a href="#zerofs-ko" class="headerlink" title="zerofs.ko"></a>zerofs.ko</h2><p>I found the module may be modified by <a href="https://github.com/psankar/simplefs" target="_blank" rel="external">simplefs</a> after the game.<br>By reversing <em>zerofs.ko</em>, I knew the blocksize is 4096 bits. The first block of the image is the superblock. It consists of magic, block_size, inode_count and free_blocks bitmap.</p>
