@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="Eadom&#39;s Blog">
-    <title>UCTF2017 初赛 PWN题 Writeup - Eadom&#39;s Blog</title>
+    <title>0ctf-2010-zerofs-writeup - Eadom&#39;s Blog</title>
     <meta name="author" content="Eadom">
     
     
@@ -15,25 +15,21 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="题目中上，但各种乱象毁了这个比赛。
-
-NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程序只是一个简单的读取输入并返回。
-123456$ checksec NotFormat    Arch:     amd64-64-little    RELRO:    Partial RELRO    Stack:    No canary found    NX:       NX e">
+    <meta name="description" content="Overviewzerofs.ko is a driver module of a custom filesystem.The kernel and the module is compiled by randstruct plugin, which I found in the magic string – vermagic=4.13.0 SMP mod_unload modversionsRA">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="UCTF2017 初赛 PWN题 Writeup">
-<meta property="og:url" content="https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/index.html">
+<meta property="og:title" content="0ctf-2010-zerofs-writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/index.html">
 <meta property="og:site_name" content="Eadom's Blog">
-<meta property="og:description" content="题目中上，但各种乱象毁了这个比赛。
-
-NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程序只是一个简单的读取输入并返回。
-123456$ checksec NotFormat    Arch:     amd64-64-little    RELRO:    Partial RELRO    Stack:    No canary found    NX:       NX e">
-<meta property="og:updated_time" content="2017-07-10T08:47:44.000Z">
+<meta property="og:description" content="Overviewzerofs.ko is a driver module of a custom filesystem.The kernel and the module is compiled by randstruct plugin, which I found in the magic string – vermagic=4.13.0 SMP mod_unload modversionsRA">
+<meta property="og:image" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/zerofs_super_block.png">
+<meta property="og:image" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/zerofs_inode.png">
+<meta property="og:image" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/zerofs_dir_record.png">
+<meta property="og:image" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/get_flag.png">
+<meta property="og:updated_time" content="2018-04-03T13:37:19.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="UCTF2017 初赛 PWN题 Writeup">
-<meta name="twitter:description" content="题目中上，但各种乱象毁了这个比赛。
-
-NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程序只是一个简单的读取输入并返回。
-123456$ checksec NotFormat    Arch:     amd64-64-little    RELRO:    Partial RELRO    Stack:    No canary found    NX:       NX e">
+<meta name="twitter:title" content="0ctf-2010-zerofs-writeup">
+<meta name="twitter:description" content="Overviewzerofs.ko is a driver module of a custom filesystem.The kernel and the module is compiled by randstruct plugin, which I found in the magic string – vermagic=4.13.0 SMP mod_unload modversionsRA">
+<meta name="twitter:image" content="https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/zerofs_super_block.png">
     
     
         
@@ -240,13 +236,13 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            UCTF2017 初赛 PWN题 Writeup
+            0ctf-2010-zerofs-writeup
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-07-10T16:44:39+08:00">
+    <time itemprop="datePublished" datetime="2018-04-03T00:15:39+08:00">
 	
-		    Jul 10, 2017
+		    Apr 03, 2018
     	
     </time>
     
@@ -262,46 +258,22 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <blockquote>
-<p>题目中上，但各种乱象毁了这个比赛。</p>
-</blockquote>
-<h2 id="NotFormat"><a href="#NotFormat" class="headerlink" title="NotFormat"></a>NotFormat</h2><h3 id="概览"><a href="#概览" class="headerlink" title="概览"></a>概览</h3><p>程序是静态链接的，利用缓解机制只启用了NX,程序只是一个简单的读取输入并返回。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">$ checksec NotFormat</div><div class="line">    Arch:     amd64-64-little</div><div class="line">    RELRO:    Partial RELRO</div><div class="line">    Stack:    No canary found</div><div class="line">    NX:       NX enabled</div><div class="line">    PIE:      No PIE</div></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">$ ./NotFormat</div><div class="line">Have fun!</div><div class="line">test</div><div class="line">test</div></pre></td></tr></table></figure>
-<h3 id="漏洞"><a href="#漏洞" class="headerlink" title="漏洞"></a>漏洞</h3><p>程序main函数很短，如下</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">  <span class="keyword">double</span> v8; <span class="comment">// xmm4_8@1</span></div><div class="line">  <span class="keyword">double</span> v9; <span class="comment">// xmm5_8@1</span></div><div class="line">  <span class="keyword">char</span> buf[<span class="number">264</span>]; <span class="comment">// [rsp+0h] [rbp-110h]@1</span></div><div class="line">  __int64 v11; <span class="comment">// [rsp+108h] [rbp-8h]@1</span></div><div class="line"></div><div class="line">  v11 = *MK_FP(__FS__, <span class="number">40L</span>L);</div><div class="line">  setvbuf((<span class="keyword">int</span> *)off_6CB740, <span class="number">0L</span>L, <span class="number">2</span>, <span class="number">0L</span>L);</div><div class="line">  <span class="built_in">puts</span>(<span class="string">"Have fun!"</span>);</div><div class="line">  read_line(buf);</div><div class="line">  <span class="built_in">printf</span>(buf, <span class="number">0L</span>L);</div><div class="line">  <span class="built_in">exit</span>(<span class="number">0L</span>L);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>存在一个很明显的格式化字符串漏洞。</p>
-<h3 id="利用"><a href="#利用" class="headerlink" title="利用"></a>利用</h3><p>因为格式化字符串使用之后立即就调用exit退出了，所以目标是直接通过一次printf劫持控制流。</p>
-<h4 id="控制RIP"><a href="#控制RIP" class="headerlink" title="控制RIP"></a>控制RIP</h4><p>我用到的是修改FILE *stdout结构的vtable到我们构造的位置。由于没有开启PIE，所以这些内容的位置都可以确定。</p>
-<h4 id="栈迁移"><a href="#栈迁移" class="headerlink" title="栈迁移"></a>栈迁移</h4><p>当控制RIP之后，程序的栈的位置与我们输入内容的位置差距很大，但是正好找到这个gadget可以迁移到我们输入的buffer。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">0x43f17d : ret 0x6b8</div></pre></td></tr></table></figure>
-<p>ret之后正好会跳到0x0457fc1位置，实现栈迁移。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">0x457fc1 : add rsp, 0x2120 ; mov eax, r12d ; pop rbx ; pop rbp ; pop r12 ; pop r13 ; pop r14 ; re</div></pre></td></tr></table></figure>
-<p>之后可以再次调用read，并再次迁移到一个大buffer。最后调用<code>execve(&quot;/bin/sh&quot;, 0, 0)</code></p>
-<p><a href="https://gist.github.com/Eadom/9be3d15affa56ae96b72bcdbdefbce34" target="_blank" rel="external">uctf2017_notformat.py</a></p>
-<h2 id="babydriver"><a href="#babydriver" class="headerlink" title="babydriver"></a>babydriver</h2><h3 id="概览-1"><a href="#概览-1" class="headerlink" title="概览"></a>概览</h3><p>这是一个简单的驱动题，只开启了SMEP(貌似也用不到……)。</p>
-<p>提供了<code>/dev/babydriver</code>设备:</p>
-<ul>
-<li>read/write操作可以将buf从<code>babydev_struct.device_buf</code>读取或写入，长度限制为<code>babydev_struct.device_buf_len</code>。</li>
-<li>ioctl的cmd为0x10001时可以对<code>babydev_struct.device_buf</code>重新分配。</li>
-<li>close时会将<code>babydev_struct.device_buf</code>释放。</li>
-</ul>
-<h3 id="漏洞-1"><a href="#漏洞-1" class="headerlink" title="漏洞"></a>漏洞</h3><p>一个最明显的漏洞是<code>babydev_struct</code>是一个全局变量，所有的文件描述符都共享一个<code>babydev_struct</code>，当一个文件描述符被调用close时，<code>babydev_struct.device_buf</code>会被释放。当其他未关闭的文件描述符调用时，会触发UAF，可以对一段内核空间进行读写。</p>
-<h3 id="利用-1"><a href="#利用-1" class="headerlink" title="利用"></a>利用</h3><p>当device_buf被释放掉后，这个指针成为悬空指针，扔可以进行读写，这时候希望可以有一个结构被申请然后占到原来的这个位置。最直观的想法就是如果能有cred结构直接占上来，然后就可以对cred内容修改，达到获取root权限的目的。</p>
-<p>cred结构如下</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">struct</span> cred &#123;</div><div class="line">	<span class="keyword">atomic_t</span>	usage;</div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_DEBUG_CREDENTIALS</span></div><div class="line">	<span class="keyword">atomic_t</span>	subscribers;	<span class="comment">/* number of processes subscribed */</span></div><div class="line">	<span class="keyword">void</span>		*put_addr;</div><div class="line">	<span class="keyword">unsigned</span>	magic;</div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> CRED_MAGIC	0x43736564</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> CRED_MAGIC_DEAD	0x44656144</span></div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">	<span class="keyword">kuid_t</span>		uid;		<span class="comment">/* real UID of the task */</span></div><div class="line">	<span class="keyword">kgid_t</span>		gid;		<span class="comment">/* real GID of the task */</span></div><div class="line">	<span class="keyword">kuid_t</span>		suid;		<span class="comment">/* saved UID of the task */</span></div><div class="line">	<span class="keyword">kgid_t</span>		sgid;		<span class="comment">/* saved GID of the task */</span></div><div class="line">	<span class="keyword">kuid_t</span>		euid;		<span class="comment">/* effective UID of the task */</span></div><div class="line">	<span class="keyword">kgid_t</span>		egid;		<span class="comment">/* effective GID of the task */</span></div><div class="line">	<span class="keyword">kuid_t</span>		fsuid;		<span class="comment">/* UID for VFS ops */</span></div><div class="line">	<span class="keyword">kgid_t</span>		fsgid;		<span class="comment">/* GID for VFS ops */</span></div><div class="line">	<span class="keyword">unsigned</span>	securebits;	<span class="comment">/* SUID-less security management */</span></div><div class="line">	<span class="keyword">kernel_cap_t</span>	cap_inheritable; <span class="comment">/* caps our children can inherit */</span></div><div class="line">	<span class="keyword">kernel_cap_t</span>	cap_permitted;	<span class="comment">/* caps we're permitted */</span></div><div class="line">	<span class="keyword">kernel_cap_t</span>	cap_effective;	<span class="comment">/* caps we can actually use */</span></div><div class="line">	<span class="keyword">kernel_cap_t</span>	cap_bset;	<span class="comment">/* capability bounding set */</span></div><div class="line">	<span class="keyword">kernel_cap_t</span>	cap_ambient;	<span class="comment">/* Ambient capability set */</span></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_KEYS</span></div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">char</span>	jit_keyring;	<span class="comment">/* default keyring to attach requested</span></div><div class="line">					 * keys to */</div><div class="line">	<span class="keyword">struct</span> key __rcu *session_keyring; <span class="comment">/* keyring inherited over fork */</span></div><div class="line">	<span class="keyword">struct</span> key	*process_keyring; <span class="comment">/* keyring private to this process */</span></div><div class="line">	<span class="keyword">struct</span> key	*thread_keyring; <span class="comment">/* keyring private to this thread */</span></div><div class="line">	<span class="keyword">struct</span> key	*request_key_auth; <span class="comment">/* assumed request_key authority */</span></div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_SECURITY</span></div><div class="line">	<span class="keyword">void</span>		*security;	<span class="comment">/* subjective LSM security */</span></div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">	<span class="keyword">struct</span> user_struct *user;	<span class="comment">/* real user ID subscription */</span></div><div class="line">	<span class="keyword">struct</span> user_namespace *user_ns; <span class="comment">/* user_ns the caps and keyrings are relative to. */</span></div><div class="line">	<span class="keyword">struct</span> group_info *group_info;	<span class="comment">/* supplementary groups for euid/fsgid */</span></div><div class="line">	<span class="keyword">struct</span> rcu_head	rcu;		<span class="comment">/* RCU deletion hook */</span></div><div class="line">&#125;;</div></pre></td></tr></table></figure>
-<p>它的大小是0xa8。于是利用的步骤如下：</p>
-<ol>
-<li>open两个fd，fd1及fd2。通过ioctl设置device_buf为0xa8大小。</li>
-<li>close(fd1)，device_buf指针被释放。</li>
-<li>现在可以通过fd2继续操作device_buf指向的内容。</li>
-<li>通过fork一堆进程试图在申请cred结构的时候占到device_buf指向的位置。</li>
-<li>修改占上的cred，获取root。 </li>
-</ol>
-<p>做的时候粗暴地试试结果发现就可以占上了……然后粗暴的把ctf用户的所有的id为0x3e8的都改成了0。</p>
-<p><a href="https://gist.github.com/Eadom/c88f1eab2853281583aab150382ec710" target="_blank" rel="external">uctf2017_babydriver.py</a></p>
-<p>P.S. 出题时希望可以把网卡驱动带进去，不然传程序进去也挺麻烦……</p>
-
+            <h2 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h2><p><em>zerofs.ko</em> is a driver module of a custom filesystem.<br>The kernel and the module is compiled by randstruct plugin, which I found in the magic string – <code>vermagic=4.13.0 SMP mod_unload modversions</code>RANDSTRUCT_PLUGIN_3c73df5cc8285309b74c8a4caaf831205da45096402d3b1a80caab1d7fa1b03a`.<br><em>run.sh</em> and <em>/init</em> show that the kernel is protected by SMEP, SMAP, KASLR, kptr_restrict and dmesg_restrict.</p>
+<h2 id="zerofs-ko"><a href="#zerofs-ko" class="headerlink" title="zerofs.ko"></a>zerofs.ko</h2><p>I found the module may be modified by <a href="https://github.com/psankar/simplefs" target="_blank" rel="external">simplefs</a> after the game.<br>By reversing <em>zerofs.ko</em>, I knew the blocksize is 4096 bits. The first block of the image is the superblock. It consists of magic, block_size, inode_count and free_blocks bitmap.</p>
+<img src="/writeups/0ctf-2018-zerofs-writeup/zerofs_super_block.png" alt="zerofs_super_block" title="zerofs_super_block">
+<p>The second block records all of the inodes in an array. <em>ino</em> is inode number, and dno is the block number of the image.</p>
+<img src="/writeups/0ctf-2018-zerofs-writeup/zerofs_inode.png" alt="zerofs_inode" title="zerofs_inode">
+<p>There is a root inode which ino is 1. It indicates the root dictionary. There is a block corresponding to root dictionary to indicates files in the dictionary. It is an array of zerofs_dir_record structure. </p>
+<img src="/writeups/0ctf-2018-zerofs-writeup/zerofs_dir_record.png" alt="zerofs_dir_record" title="zerofs_dir_record">
+<h2 id="Vulnerabilitie"><a href="#Vulnerabilitie" class="headerlink" title="Vulnerabilitie"></a>Vulnerabilitie</h2><p>There isn’t any bound or size check in read and write function.<br>If the filesize we set in image is bigger than blocksize(0x1000), there will be an out-of-bound read/write when invoking copy_to_user/copy_from_user.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">unsigned</span> __int64 __<span class="function">fastcall <span class="title">zerofs_read</span><span class="params">(file *filp, <span class="keyword">char</span> *buf, <span class="keyword">size_t</span> len, <span class="keyword">loff_t</span> *ppos)</span></span></div><div class="line">&#123;</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> ( copy_to_user(buf, &amp;bh0-&gt;b_data[*pos_1], len_1) ) <span class="comment">// OOB READ</span></div><div class="line">    &#123;</div><div class="line">        ...</div><div class="line">    &#125;    </div><div class="line">    ...</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">ssize_t</span> __<span class="function">fastcall <span class="title">zerofs_write</span><span class="params">(file *filp, <span class="keyword">const</span> <span class="keyword">char</span> *buf, <span class="keyword">size_t</span> len, <span class="keyword">loff_t</span> *ppos)</span></span></div><div class="line">&#123;</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> ( copy_from_user(&amp;bh0-&gt;b_data[*pos], buf, len_1) ) <span class="comment">// OOB WRITE</span></div><div class="line">    &#123;</div><div class="line">        ...</div><div class="line">    &#125;</div><div class="line">    ...</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="Constructing-Image"><a href="#Constructing-Image" class="headerlink" title="Constructing Image"></a>Constructing Image</h2><p>To exploit the vulnerabilities, I need to construct an malicious image. Here is the script. I put a file named <em>666</em> with size of 0xffffffffffffffff.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#!/usr/bin/env python2</span></div><div class="line"><span class="comment"># -*- coding: utf-8 -*-</span></div><div class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</div><div class="line"></div><div class="line">block0 = p64(<span class="number">0x4F52455A</span>) + p64(<span class="number">4096</span>) + p64(<span class="number">3</span>) + p64(<span class="number">0xffffffff</span> ^ <span class="number">0x7</span>)</div><div class="line">block0 = block0.ljust(<span class="number">0x1000</span>, <span class="string">'\x00'</span>)</div><div class="line"></div><div class="line">block1 = <span class="string">''</span></div><div class="line">inode1 = p64(<span class="number">1</span>) + p64(<span class="number">2</span>) + p64(<span class="number">0x4000</span>) + p64(<span class="number">0x1</span>)</div><div class="line">inode2 = p64(<span class="number">2</span>) + p64(<span class="number">3</span>) + p64(<span class="number">0x8000</span>) + p64(<span class="number">0xffffffffffffffff</span>)</div><div class="line">block1 += inode1 + inode2</div><div class="line">block1 = block1.ljust(<span class="number">0x1000</span>, <span class="string">'\x00'</span>)</div><div class="line"></div><div class="line">block2 = <span class="string">''</span></div><div class="line">block2 += <span class="string">'666'</span>.ljust(<span class="number">256</span>, <span class="string">'\x00'</span>)</div><div class="line">block2 += p64(<span class="number">2</span>)</div><div class="line">block2 = block2.ljust(<span class="number">0x1000</span>, <span class="string">'\x00'</span>)</div><div class="line"></div><div class="line">img = block0 + block1 + block2 + <span class="string">'\x30'</span> * <span class="number">0x1000</span> * <span class="number">1</span></div><div class="line"></div><div class="line"><span class="keyword">with</span> open(<span class="string">'fs/tmp/zerofs.img'</span>, <span class="string">'wb'</span>) <span class="keyword">as</span> f:</div><div class="line">    f.write(img)</div></pre></td></tr></table></figure>
+<h2 id="Exploit"><a href="#Exploit" class="headerlink" title="Exploit"></a>Exploit</h2><p>After mounting the image, I could trigger out-of-bound read by read the file <em>666</em>.<br>I tried to find CRED struct in leaked memory. Fortunately, I found some by searching the uid. It took me some time to locate CRED struct because of the radomization of structures.</p>
+<p>I still didn’t know which CRED is valid and which process the CRED belongs to although I could find some CRED structures. The exploit is not stable, so I run the exploit serval times. After leaking the memory, the exploit will check if it gets root privilege in a loop. If so, it invokes <code>system(&quot;sha256sum /root/flag&quot;);</code>.</p>
+<p>The last step is to write the CRED. I invoked llseek to set offset to the CRED, and invoked write to modify the CRED, setting uid to 0.</p>
+<p>Here is the <a href="https://gist.github.com/Eadom/29f8627d428a90842a99b2c176d4789a" target="_blank" rel="external">expliot</a></p>
+<img src="/writeups/0ctf-2018-zerofs-writeup/get_flag.png" alt="get_flag" title="get_flag">
             
         </div>
     </div>
@@ -310,7 +282,7 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
             <div class="post-footer-tags">
                 <span class="text-color-light text-small">TAGGED IN</span><br/>
                 
-    <a class="tag tag--primary tag--small t-link" href="/tags/uctf/">uctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+    <a class="tag tag--primary tag--small t-link" href="/tags/0ctf/">0ctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
 
             </div>
         
@@ -319,7 +291,7 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/0ctf-2018-zerofs-writeup/"  data-tooltip="0ctf-2010-zerofs-writeup">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
@@ -327,7 +299,7 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/" data-tooltip="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/uctf-2017-quals-pwn-writeup/" data-tooltip="UCTF2017 初赛 PWN题 Writeup">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
                     <i class="fa fa-angle-right"></i>
@@ -342,17 +314,17 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -400,7 +372,7 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/0ctf-2018-zerofs-writeup/"  data-tooltip="0ctf-2010-zerofs-writeup">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
@@ -408,7 +380,7 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/qemu-escape-vm-escape-from-0ctf-2017-finals-writeup/" data-tooltip="QEMU Escape --- vm_escape from 0CTF 2017 Finals Writeup">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/uctf-2017-quals-pwn-writeup/" data-tooltip="UCTF2017 初赛 PWN题 Writeup">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
                     <i class="fa fa-angle-right"></i>
@@ -423,17 +395,17 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -459,17 +431,17 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
                 <div id="share-options-bar" class="share-options-bar" data-behavior="1">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/">
                 <i class="fa fa-twitter"></i><span>Share on Twitter</span>
             </a>
         </li>
@@ -633,9 +605,9 @@ NotFormat概览程序是静态链接的，利用缓解机制只启用了NX,程�
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://blog.eadom.net/writeups/uctf-2017-quals-pwn-writeup/';
+                 this.page.url = 'https://blog.eadom.net/writeups/0ctf-2018-zerofs-writeup/';
                  
-                    this.page.identifier = 'writeups/uctf-2017-quals-pwn-writeup/';
+                    this.page.identifier = 'writeups/0ctf-2018-zerofs-writeup/';
                  
              };
             (function() {
