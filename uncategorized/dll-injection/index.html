@@ -1,0 +1,722 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>远程线程注入之DLL注入 - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="找到之前写的个类，ring3实现DLL注入进程，Inject()注入，Uninject()卸载
+12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879808">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="远程线程注入之DLL注入">
+<meta property="og:url" content="https://blog.eadom.net/uncategorized/dll-injection/index.html">
+<meta property="og:site_name" content="Eadom's Blog">
+<meta property="og:description" content="找到之前写的个类，ring3实现DLL注入进程，Inject()注入，Uninject()卸载
+12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879808">
+<meta property="og:updated_time" content="2019-03-15T09:11:12.485Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="远程线程注入之DLL注入">
+<meta name="twitter:description" content="找到之前写的个类，ring3实现DLL注入进程，Inject()注入，Uninject()卸载
+12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879808">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">Eadom&#39;s Blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">Search</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/eadom" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="http://weibo.com/onetpig" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-weibo"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/Yufan_L" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            远程线程注入之DLL注入
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2014-06-19T12:36:37+08:00">
+	
+		    Jun 19, 2014
+    	
+    </time>
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>找到之前写的个类，ring3实现DLL注入进程，Inject()注入，Uninject()卸载</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/************************************************************************/</span></div><div class="line"><span class="comment">/*</span></div><div class="line">Yufan</div><div class="line"></div><div class="line">CInjectDLL a class for DLL injection</div><div class="line">to inject use Inject()</div><div class="line">to uninject use Uninject()</div><div class="line"></div><div class="line">*/</div><div class="line"><span class="comment">/************************************************************************/</span></div><div class="line"><span class="meta">#<span class="meta-keyword">pragma</span> once</span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"stdafx.h"</span></span></div><div class="line"></div><div class="line"><span class="keyword">class</span> CInjectDLL</div><div class="line">&#123;</div><div class="line"><span class="keyword">public</span>:</div><div class="line">	CInjectDLL(<span class="keyword">void</span>);</div><div class="line">	<span class="function">BOOL <span class="title">Inject</span><span class="params">(<span class="keyword">const</span> DWORD dwRemoteProcessID, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</span></span>;</div><div class="line">	<span class="function">BOOL <span class="title">Inject</span><span class="params">(<span class="keyword">const</span> LPCWSTR wszProcessName, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</span></span>;</div><div class="line">	<span class="function">BOOL <span class="title">Uninject</span><span class="params">(<span class="keyword">const</span> DWORD dwRemoteProcessID, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</span></span>;</div><div class="line">	<span class="function">BOOL <span class="title">Uninject</span><span class="params">(<span class="keyword">const</span> LPCWSTR wszProcessName, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</span></span>;</div><div class="line">	~CInjectDLL(<span class="keyword">void</span>);</div><div class="line"><span class="keyword">private</span>:</div><div class="line">	<span class="function">BOOL <span class="title">AdjustProcessTokenPrivilege</span><span class="params">()</span></span>;</div><div class="line">	<span class="function">BOOL <span class="title">GetProcessID</span><span class="params">(<span class="keyword">const</span> <span class="keyword">wchar_t</span>* wszProcessName, DWORD&amp; dwProcID)</span></span>;</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="comment">/************************************************************************/</span></div><div class="line"><span class="comment">/*</span></div><div class="line">Yufan</div><div class="line"></div><div class="line">CInjectDLL a class for DLL injection</div><div class="line">to inject use Inject()</div><div class="line">to uninject use Uninject()</div><div class="line"></div><div class="line">*/</div><div class="line"><span class="comment">/************************************************************************/</span></div><div class="line"><span class="meta">#<span class="meta-keyword">pragma</span> once</span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"StdAfx.h"</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"InjectDLL.h"</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;Windows.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"tlhelp32.h"</span></span></div><div class="line"></div><div class="line">CInjectDLL::CInjectDLL(<span class="keyword">void</span>)</div><div class="line">&#123;</div><div class="line">&#125;</div><div class="line"></div><div class="line">CInjectDLL::~CInjectDLL(<span class="keyword">void</span>)</div><div class="line">&#123;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::Inject(<span class="keyword">const</span> DWORD dwRemoteProcessID, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</div><div class="line">&#123;</div><div class="line">	<span class="built_in">std</span>::wstring wstrRemoteDllFullPath = lpwszRemoteDllFullPath;</div><div class="line">	BOOL bRet;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (!AdjustProcessTokenPrivilege())</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"AdjustProcessTokenPrivilege failn"</span>));</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	HANDLE hRemoteProgress = ::OpenProcess(PROCESS\_ALL\_ACCESS, FALSE, dwRemoteProcessID);</div><div class="line">	<span class="keyword">if</span> (hRemoteProgress == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"OpenProcess failn"</span>));</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Allocate remote memory</span></div><div class="line">	DWORD dwMemSize = <span class="keyword">sizeof</span>(<span class="keyword">wchar_t</span>)*wstrRemoteDllFullPath.length()+<span class="number">1</span>;</div><div class="line">	wchar\<span class="keyword">_t</span>* wszDllPath = reinterpret\_cast&lt;wchar\<span class="keyword">_t</span>*&gt;(::VirtualAllocEx(hRemoteProgress, <span class="literal">NULL</span>, dwMemSize, MEM\_COMMIT, PAGE_READWRITE));</div><div class="line">	<span class="keyword">if</span> (wszDllPath == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"VirtualAllocEx failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Write remote Memory</span></div><div class="line">	bRet = ::WriteProcessMemory(hRemoteProgress, wszDllPath, wstrRemoteDllFullPath.c_str(), dwMemSize, <span class="literal">NULL</span>);</div><div class="line">	<span class="keyword">if</span> (!bRet)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"WriteProcessMemory failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Create remote thread</span></div><div class="line">	FARPROC pfnFunAddr = ::GetProcAddress(::GetModuleHandle(_T(<span class="string">"Kernel32"</span>)),<span class="string">"LoadLibraryW"</span>);</div><div class="line">	<span class="keyword">if</span> (pfnFunAddr == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"GetProcAddress failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	HANDLE hCreateThread;</div><div class="line">	hCreateThread = ::CreateRemoteThread(hRemoteProgress, <span class="literal">NULL</span>, <span class="number">0</span>, (LPTHREAD\_START\_ROUTINE) pfnFunAddr, wszDllPath, <span class="number">0</span>, <span class="literal">NULL</span>);</div><div class="line">	<span class="keyword">if</span> (hCreateThread == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"CreateRemoteThread failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line"></div><div class="line">		::CloseHandle(hCreateThread);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Wait for thread return</span></div><div class="line"><span class="comment">// 	DWORD hLibModule;</span></div><div class="line"><span class="comment">// 	WaitForSingleObject(hCreateThread, INFINITE);</span></div><div class="line"><span class="comment">// 	GetExitCodeThread(hCreateThread, &amp;hLibModule);</span></div><div class="line"></div><div class="line">	::VirtualFreeEx(hRemoteProgress, reinterpret\_cast&lt;LPVOID&gt;(wszDllPath), dwMemSize, MEM\_COMMIT);</div><div class="line">	::CloseHandle(hCreateThread);</div><div class="line">	::CloseHandle(hRemoteProgress);</div><div class="line">	<span class="keyword">return</span> TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::Inject(<span class="keyword">const</span> <span class="keyword">wchar_t</span>* wszProcessName, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</div><div class="line">&#123;</div><div class="line">	DWORD dwProcID;</div><div class="line">	GetProcessID(wszProcessName,dwProcID);</div><div class="line">	<span class="keyword">if</span> (Inject(dwProcID, lpwszRemoteDllFullPath))</div><div class="line">		<span class="keyword">return</span> TRUE;</div><div class="line">	<span class="keyword">else</span></div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::Uninject(<span class="keyword">const</span> DWORD dwRemoteProcessID, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</div><div class="line">&#123;</div><div class="line">	<span class="built_in">std</span>::wstring wstrRemoteDllFullPath = lpwszRemoteDllFullPath;</div><div class="line"></div><div class="line">	<span class="comment">// Find injected DLL handle</span></div><div class="line">	HANDLE hSnap = ::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, dwRemoteProcessID);</div><div class="line">	MODULEENTRY32 Me32 = &#123;<span class="number">0</span>&#125;;</div><div class="line">	Me32.dwSize = <span class="keyword">sizeof</span>(MODULEENTRY32);</div><div class="line"></div><div class="line">	BOOL bRet = ::Module32First(hSnap, &amp;Me32);</div><div class="line">	<span class="keyword">while</span> (bRet)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">if</span> (wcscmp(Me32.szExePath, wstrRemoteDllFullPath.c_str()) == <span class="number">0</span>)</div><div class="line">		&#123;</div><div class="line">			<span class="keyword">break</span>;</div><div class="line">		&#125;</div><div class="line">		bRet = ::Module32Next(hSnap, &amp;Me32);</div><div class="line">	&#125;</div><div class="line">	::CloseHandle(hSnap);</div><div class="line"></div><div class="line">	HANDLE hRemoteProgress = ::OpenProcess(PROCESS\_ALL\_ACCESS, FALSE, dwRemoteProcessID);</div><div class="line">	<span class="keyword">if</span> (hRemoteProgress == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"OpenProcess failn"</span>));</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Create remote thread</span></div><div class="line">	FARPROC pfnFunAddr = ::GetProcAddress(::GetModuleHandle(_T(<span class="string">"Kernel32"</span>)),<span class="string">"FreeLibrary"</span>);</div><div class="line">	<span class="keyword">if</span> (pfnFunAddr == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"GetProcAddress failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	HANDLE hCreateThread;</div><div class="line">	hCreateThread = ::CreateRemoteThread(hRemoteProgress, <span class="literal">NULL</span>, <span class="number">0</span>, (LPTHREAD\_START\_ROUTINE)pfnFunAddr, Me32.hModule, <span class="number">0</span>, <span class="literal">NULL</span>);</div><div class="line">	<span class="keyword">if</span> (hCreateThread == <span class="literal">NULL</span>)</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"CreateRemoteThread failn"</span>));</div><div class="line">		::CloseHandle(hRemoteProgress);</div><div class="line">		::CloseHandle(hCreateThread);</div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">// Wait for thread return</span></div><div class="line">	<span class="comment">//DWORD hLibModule;</span></div><div class="line">	<span class="comment">//WaitForSingleObject(hCreateThread, INFINITE);</span></div><div class="line">	<span class="comment">//GetExitCodeThread(hCreateThread, &amp;hLibModule);</span></div><div class="line"></div><div class="line">	::CloseHandle(hCreateThread);</div><div class="line">	::CloseHandle(hRemoteProgress);</div><div class="line">	<span class="keyword">return</span> TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::Uninject(<span class="keyword">const</span> <span class="keyword">wchar_t</span>* wszProcessName, <span class="keyword">const</span> LPCTSTR&amp; lpwszRemoteDllFullPath)</div><div class="line">&#123;</div><div class="line">	DWORD dwProcID;</div><div class="line">	GetProcessID(wszProcessName,dwProcID);</div><div class="line">	<span class="keyword">if</span> (Uninject(dwProcID, lpwszRemoteDllFullPath))</div><div class="line">		<span class="keyword">return</span> TRUE;</div><div class="line">	<span class="keyword">else</span></div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::AdjustProcessTokenPrivilege()</div><div class="line">&#123;</div><div class="line">	LUID luidTmp;</div><div class="line">	HANDLE hToken;</div><div class="line">	TOKEN_PRIVILEGES tkp;</div><div class="line"></div><div class="line">	<span class="keyword">if</span>(!OpenProcessToken(GetCurrentProcess(), TOKEN\_ADJUST\_PRIVILEGES | TOKEN_QUERY, &amp;hToken))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"AdjustProcessTokenPrivilege OpenProcessToken Failed ! n"</span>));</div><div class="line"></div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">if</span>(!LookupPrivilegeValue(<span class="literal">NULL</span>, SE\_DEBUG\_NAME, &amp;luidTmp))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"AdjustProcessTokenPrivilege LookupPrivilegeValue Failed ! n"</span>));</div><div class="line"></div><div class="line">		CloseHandle(hToken);</div><div class="line"></div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	tkp.PrivilegeCount = <span class="number">1</span>;</div><div class="line">	tkp.Privileges\[<span class="number">0</span>\].Luid = luidTmp;</div><div class="line">	tkp.Privileges\[<span class="number">0</span>\].Attributes = SE\_PRIVILEGE\_ENABLED;</div><div class="line"></div><div class="line">	<span class="keyword">if</span>(!AdjustTokenPrivileges(hToken, FALSE, &amp;tkp, <span class="keyword">sizeof</span>(tkp), <span class="literal">NULL</span>, <span class="literal">NULL</span>))</div><div class="line">	&#123;</div><div class="line">		OutputDebugString(_T(<span class="string">"AdjustProcessTokenPrivilege AdjustTokenPrivileges Failed ! n"</span>));</div><div class="line"></div><div class="line">		CloseHandle(hToken);</div><div class="line"></div><div class="line">		<span class="keyword">return</span> FALSE;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> TRUE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">BOOL CInjectDLL::GetProcessID(<span class="keyword">const</span> <span class="keyword">wchar_t</span>* wszProcessName, DWORD&amp; dwProcID)</div><div class="line">&#123;</div><div class="line">	HANDLE hSnapShot	= ::CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, dwProcID );</div><div class="line">	PROCESSENTRY32 pe	= &#123;<span class="keyword">sizeof</span>(pe)&#125;;</div><div class="line">	BOOL bOk			= ::Process32First( hSnapShot, &amp;pe );</div><div class="line">	<span class="keyword">while</span>( bOk )</div><div class="line">	&#123;</div><div class="line">		<span class="comment">//wprintf(TEXT("ProcessID : %d, Name : %sn"), pe.th32ProcessID, pe.szExeFile);</span></div><div class="line">		<span class="keyword">if</span> (wcsstr(pe.szExeFile, wszProcessName)!=<span class="literal">NULL</span>)</div><div class="line">		&#123;</div><div class="line">			dwProcID = pe.th32ProcessID;</div><div class="line">			<span class="keyword">return</span> TRUE;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		bOk	= ::Process32Next( hSnapShot, &amp;pe );</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	::CloseHandle(hSnapShot);</div><div class="line"></div><div class="line">	<span class="keyword">return</span> FALSE;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/remote-thread-injection-without-dll/"  data-tooltip="不注入DLL实现远程线程注入">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/actf2014-crypto200-writerup/" data-tooltip="ACTF2014之crypto200买不到票的怨念writerup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2019 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/remote-thread-injection-without-dll/"  data-tooltip="不注入DLL实现远程线程注入">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/actf2014-crypto200-writerup/" data-tooltip="ACTF2014之crypto200买不到票的怨念writerup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/dll-injection/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">no post found</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto100-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto100混沌密码锁writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto300比特币钱包writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto400地铁难挤writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/lianliankan-cheater/">
+                            <h3 class="media-heading">连连看外挂——人生真是寂寞如雪啊</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/">
+                            <h3 class="media-heading">rjsupplicant for linux 锐捷代理破除多网卡限制</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 3, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/process-monoalphabetic-substitution-cipher/">
+                            <h3 class="media-heading">辅助处理单表替换密码</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 6, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto100-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto100古老writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto200-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto200买不到票的怨念writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/dll-injection/">
+                            <h3 class="media-heading">远程线程注入之DLL注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 19, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                            <h3 class="media-heading">不注入DLL实现远程线程注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 25, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="no post found"
+                data-message-one="1 post found"
+                data-message-other="{n} posts found">
+                19 posts found
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://blog.eadom.net/uncategorized/dll-injection/';
+                 
+                    this.page.identifier = 'uncategorized/dll-injection/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'eadomblog';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    </body>
+</html>

