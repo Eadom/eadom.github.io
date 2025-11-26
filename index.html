@@ -297,318 +297,6 @@
                     
                         <a
                             class="link-unstyled"
-                            href="/uncategorized/cloudflare-nov-18-outage-change-perspective/"
-                            aria-label=": 从变更角度“复盘” Cloudflare 11·18 故障0CTF2015 Writeup"
-                        >
-                            从变更角度“复盘” Cloudflare 11·18 故障0CTF2015 Writeup
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2025-11-26T21:31:51+08:00">
-	
-		    Nov 26, 2025
-    	
-    </time>
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-content">
-                    <h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><p>2025 年 11 月 18 日，Cloudflare 遭遇了一次影响范围不小的故障，导致其部分服务在一段时间内出现明显异常、访问失败或性能下降；具体影响范围可以参考 Cloudflare 在官方博客中发布的复盘报告<a href="https://blog.cloudflare.com/18-november-2025-outage/" target="_blank" rel="noopener">《Cloudflare outage on November 18, 2025》</a>。</p>
-<p>事后 Cloudflare 很快发布了详细的技术复盘报告，把这次故障的来龙去脉讲得比较清楚：<strong>直接诱因是一项数据库权限配置变更</strong>，而下游某些 Rust 服务在异常路径上的健壮性不足，被这次变更“精准命中”，最终演化成大面积的服务不可用。在复盘文章里，可以看到典型的 <code>unwrap</code> 使用导致程序在遇到异常数据时直接崩溃，这一点也迅速成了社区讨论的焦点。</p>
-<p><code>unwrap</code> 确实是这次事故的重要触发点之一，但如果只停留在“不要乱用 unwrap”这个层面，我们能学到的东西其实很有限。<strong>在真实的工程环境里，数据库权限、配置项、安全策略，这类“看起来只是调一下配置”的变更，在研发和安全团队的日常工作中非常常见，而且数量巨大</strong>。很多时候，它们并不会被当成高风险操作对待，更不会被放到和“发一版代码”同等严肃的变更流程里去审视。</p>
-<p>正因为如此，在大家都在吐槽 <code>unwrap</code> 的时候，我更想换一个视角：站在一个局外人的位置，只基于 Cloudflare 公开的技术文章，<strong>从“变更”的角度，来看看这次事故里有哪些稳定性和安全运维层面的经验教训，是我们在日常做配置 / 安全控制变更时可以借鉴的</strong>。</p>
-<h2 id="2-事件回顾和-Cloudflare-的技术报告"><a href="#2-事件回顾和-Cloudflare-的技术报告" class="headerlink" title="2. 事件回顾和 Cloudflare 的技术报告"></a>2. 事件回顾和 Cloudflare 的技术报告</h2><p>在进入后面的讨论之前，我先按照 Cloudflare 官方技术文章里的信息，把这次故障的经过简单串一下。几个关键时间点（UTC）：</p>
-<ul>
-<li><strong>11:05</strong>：数据库访问控制变更部署</li>
-<li><strong>11:28</strong>：影响开始产生（Impact starts）</li>
-<li><strong>13:05</strong>：对 Workers KV / Access 启用 bypass，影响降低</li>
-<li><strong>13:37</strong>：确认 Bot Management 配置文件为触发点，开始回滚/修复至 last-known-good</li>
-<li><strong>14:30</strong>：主要影响解除（Main impact resolved）</li>
-<li><strong>17:06</strong>：所有服务恢复（All services resolved）</li>
-</ul>
-<p>在这个时间线里，Cloudflare 官方给出的故事大致可以拆成以下几步。</p>
-<h3 id="2-1-起点：数据库访问控制变更（11-05-UTC）"><a href="#2-1-起点：数据库访问控制变更（11-05-UTC）" class="headerlink" title="2.1 起点：数据库访问控制变更（11:05 UTC）"></a>2.1 起点：数据库访问控制变更（11:05 UTC）</h3><p>从官方时间线来看，这次事故的起点很清晰：<strong>11:05 UTC，Cloudflare 在一套用于生成 Bot Management 特征配置的数据库上，部署了一次权限相关的配置变更（database access control change）。</strong></p>
-<p>Cloudflare 在复盘里解释，这次变更的初衷是：</p>
-<ul>
-<li>把原本“隐式”的表访问权限改成“显式授权”，</li>
-<li>让分布式查询可以在真实用户账户而不是共享系统账户下执行，</li>
-<li>这样才能对每个用户的查询更细粒度地评估访问授权和查询限额（access grants / query limits），从安全和资源控制角度把关。</li>
-</ul>
-<p>问题在于：生成 Bot Management <strong>feature file（特征配置文件）</strong> 的那条查询并没有显式区分哪些库/表应该被统计进去。变更生效后，这条查询突然多拿到了一批原本不会出现的信息，导致：</p>
-<ul>
-<li>查询结果的行数接近翻倍；</li>
-<li>按这个结果生成的 feature file 体积也明显变大，特征数量远超正常水平；</li>
-<li>这份“变胖了”的配置文件依然按原有节奏在全网周期性刷新和分发。</li>
-</ul>
-<p>就变更本身来说，它在当时<strong>看上去更像是一条常规的权限/安全配置调整</strong>，而不是那种一眼就会被当作“高危大变更”的架构级操作。</p>
-<h3 id="2-2-症状出现：核心流量异常（11-28-UTC-之后）"><a href="#2-2-症状出现：核心流量异常（11-28-UTC-之后）" class="headerlink" title="2.2 症状出现：核心流量异常（11:28 UTC 之后）"></a>2.2 症状出现：核心流量异常（11:28 UTC 之后）</h3><p>官方文章在 “The outage” 一节里，展示了一张 5xx 错误量曲线图：原本很低的错误率在 11 点多突然抬升，并出现一段时间的反复波动。</p>
-<p>在文章末尾的时间线表中，<strong>11:28</strong> 被标记为：</p>
-<blockquote>
-<p>Impact starts. Deployment reaches customer environments, first errors observed on customer HTTP traffic.</p>
-</blockquote>
-<p>对外部用户来说，这一阶段的直接表现就是：</p>
-<ul>
-<li>大量站点返回 Cloudflare 自己的 5xx 错误页；</li>
-<li>Workers KV、Access、Dashboard、Turnstile 等依赖核心代理（Cloudflare 文中称为 core proxy，并用 FL/FL2 指代其不同代际/版本的核心代理组件）的服务出现错误或不可用；</li>
-<li>整体 HTTP 流量表现为“时好时坏”的波动。</li>
-</ul>
-<p>波动的原因在官方报告里也解释得比较清楚：</p>
-<ul>
-<li>feature file 每几分钟重新生成一次并分发到全网；</li>
-<li>ClickHouse 集群在逐步更新，只有已经应用访问控制变更的节点会生成“坏文件”；</li>
-<li>每一轮刷新，有可能生成“好配置”或“坏配置”，然后快速推送，导致系统在“好文件 / 坏文件”之间反复切换。</li>
-</ul>
-<h3 id="2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）"><a href="#2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）" class="headerlink" title="2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）"></a>2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）</h3><p>时间线显示，<strong>11:32–13:05</strong> 这段时间里，团队最初是沿着 <strong>Workers KV 错误和高流量</strong> 的症状在排查：</p>
-<blockquote>
-<p>“The team investigated elevated traffic levels and errors to Workers KV service… mitigations such as traffic manipulation and account limiting were attempted…”</p>
-</blockquote>
-<p>随着排障推进，Cloudflare 在 “The query behaviour change” 与 “Memory preallocation” 两节中，把技术链路写得很直白：</p>
-<ol>
-<li><strong>数据库层</strong>：访问控制变更后，查询时多返回了数据，响应行数接近翻倍；</li>
-<li><strong>配置生成层</strong>：用这条查询生成的 Bot Management feature file 跟着“变胖”，特征数量远超平时（文中描述为 “effectively more than doubling the rows in the response ultimately affecting the number of rows (i.e. features) in the final file output”）；</li>
-<li><strong>核心代理层</strong>：core proxy 上的 Bot Management 模块，为了预分配内存和防止无界增长，对特征数量设了一个硬上限（200，正常使用约 60）；</li>
-<li><p>当超大 feature file 触发这个上限时，核心组件 FL2 的 Rust 代码在检查时调用了 <code>unwrap()</code>，在 Err 分支 panic：</p>
-<blockquote>
-<p>thread fl2_worker_thread panicked: called Result::unwrap() on an Err value</p>
-</blockquote>
-</li>
-</ol>
-<p>时间线中，<strong>13:37</strong> 这一行直接写道：</p>
-<blockquote>
-<p>Work focused on rollback of the Bot Management configuration file to a last-known-good version. We were confident that the Bot Management configuration file was the trigger for the incident.</p>
-</blockquote>
-<p>也就是说，到 13:37 前后，团队已经把问题清楚地收敛到这一链路上：</p>
-<blockquote>
-<p>数据库访问控制变更 → 查询行为变化 → feature file 异常膨胀 → Bot Management 模块触发 unwrap() panic → 核心代理返回大规模 5xx。</p>
-</blockquote>
-<h3 id="2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）"><a href="#2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）" class="headerlink" title="2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）"></a>2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）</h3><p>后续的处置流程在官方时间线里也有完整记录，可以粗略分成三段：</p>
-<ol>
-<li><strong>先压住影响面（13:05 起）</strong><ul>
-<li><strong>13:05</strong>：<blockquote>
-<p>Workers KV and Cloudflare Access bypass implemented — impact reduced.</p>
-</blockquote>
-</li>
-<li>做法是通过内部 bypass，让 Workers KV 和 Access 回退到 core proxy 的旧版本，虽然旧版本同样存在问题，但影响范围和程度都更小，因此整体错误率明显下降。</li>
-</ul>
-</li>
-<li><strong>修配置文件，恢复核心流量（13:37–14:30）</strong><ul>
-<li><strong>13:37</strong>：工作重点转向回滚 Bot Management 配置文件到 last-known-good 版本；</li>
-<li><strong>14:24</strong>：<ul>
-<li>停止生成与分发新的 Bot Management 配置文件；</li>
-<li>使用旧版本配置文件的恢复测试完成；</li>
-</ul>
-</li>
-<li><strong>14:30</strong>：<blockquote>
-<p>Main impact resolved. A correct Bot Management configuration file was deployed globally and most services started operating correctly.</p>
-</blockquote>
-</li>
-</ul>
-</li>
-<li><strong>清理长尾，全部恢复（14:30–17:06）</strong><ul>
-<li>核心流量恢复后，剩下的是重启在事故中进入 bad state 的下游服务；</li>
-<li><strong>17:06</strong> ：<blockquote>
-<p>All services resolved. Impact ends. All downstream services restarted and all operations fully restored.</p>
-</blockquote>
-</li>
-</ul>
-</li>
-</ol>
-<p>到这里为止，官方技术报告给出的“工程师视角故事线”就完整了：</p>
-<ul>
-<li>11:05 的数据库访问控制变更改变了系统表查询行为；</li>
-<li>被用于生成 Bot Management 特征配置文件的查询没有过滤 database，导致配置文件异常膨胀；</li>
-<li>核心代理中的 Bot Management 模块在遇到这份“超大配置”时触发 <code>unwrap()</code> panic，引发大规模 5xx；</li>
-<li>通过 bypass 降低影响面、回滚 / 修复配置文件、重启下游服务，在 14:30 解除主体影响，17:06 完成收尾。</li>
-</ul>
-<hr>
-<p>到这里为止，我只是把 Cloudflare 在官方复盘里公开的内容，整理成了一条相对清晰的时间线和技术链路。换句话说：前面的所有事实，都是从那篇博客和时间线表里来的，我并没有也不可能掌握他们内部更多的细节。</p>
-<p>接下来如果从变更和稳定性体系的角度往下展开，就难免会带一点推断和类比。这些推断<strong>有可能和 Cloudflare 内部当时的真实情况并不完全一致</strong>，也不代表我在评价或还原他们的具体决策过程，更谈不上指责。</p>
-<p>更合适的理解是：把这次事故当成一个公开、细节足够丰富的案例，把官方给出的时间线和技术原因当作“题面”，后面的分析只是借这道题来反思我们自己在变更、稳定性上的潜在问题，看看能从中抽象出哪些对自己有用的经验教训。后文更关注机制与流程如何把风险收住，而不是复盘某个具体个人/团队的对错。</p>
-<h2 id="3-从变更视角看这次故障"><a href="#3-从变更视角看这次故障" class="headerlink" title="3. 从变更视角看这次故障"></a>3. 从变更视角看这次故障</h2><p>大家都在讨论 <code>unwrap</code>、错误处理不健壮，但真正把这一串问题引爆的，是一类我们日常也经常做的事情——<strong>改了一条权限 / 策略 / 配置</strong>。</p>
-<p>这类操作在任何公司都很常见：收紧一下权限、加一条安全规则、改一条控制面配置。平时我们可能把它归类成“小变更”。这次事故对我们来说，也是一个“复盘”自查的机会，可以就把它当成一次典型的<strong>高危配置 / 安全策略变更事故</strong>，按变更的几个阶段回头看看：如果同样的事发生在我们系统里，哪些环节我们自己也容易掉链子。</p>
-<p>下面这些都是站在“做事的人”的角度做的“复盘”与自查，不是去评价 Cloudflare 做得好不好。</p>
-<h3 id="3-1-影响面评估：这次变更到底多“高危”"><a href="#3-1-影响面评估：这次变更到底多“高危”" class="headerlink" title="3.1 影响面评估：这次变更到底多“高危”"></a>3.1 影响面评估：这次变更到底多“高危”</h3><p>先看第一步：这次到底改了个什么东西。</p>
-<p>这一类权限 / 策略变更，在日常开发里，很容易被当成“就改一下配置”——不改代码、不发新版本，只是调整一条规则，看起来像是低风险操作。</p>
-<p>评估风险大小至少可以拆成两个维度：</p>
-<ol>
-<li><strong>所处平面和作用域（它在哪一层）</strong><ul>
-<li>是某个单体服务的本地配置，只影响局部行为；</li>
-<li>还是控制面 / 安全面上的全局策略，例如：认证授权、集中配置、路由 / 流量调度这类“公共基础设施”。</li>
-</ul>
-</li>
-<li><strong>依赖关系和影响链路（后面连着谁）</strong><ul>
-<li>有多少关键服务 / 关键路径依赖这条配置 / 策略才能继续往下走；</li>
-<li>它是不是在多条核心链路上的必经节点，是典型的 critical path / chokepoint 还是一个 leaf node。</li>
-</ul>
-</li>
-</ol>
-<p>Cloudflare 这次动的是核心组件访问数据的权限，从复盘描述看，很难把它归类成一个“局部、低影响的本地配置”。在任何一个复杂系统里，这种“全局共享 + 被关键链路反复访问”的配置，按理都应该直接归到高危变更的范畴。</p>
-<p>现实里又有另一个情况：历史系统经过多年演化，上下游依赖关系复杂。但我觉得这时候，仍然有必要做一些自查，多思考几个问题，比如：</p>
-<ul>
-<li>如果这个配置完全失效，用户侧最直观的症状会是什么，最坏情况下，它会导致什么样的影响？</li>
-<li>有哪些关键服务 / 功能一定要依赖这条配置？</li>
-<li>过去的故障 / 变更记录里，有没有跟它相关的坑？</li>
-</ul>
-<p>如果这些问题都答不出一个相对有把握的结论，并不代表这个变更风险就低，反而说明：</p>
-<p>我们现在对它的影响面认知还不够清晰，这种情况下，把它当成“小配置改动”随手上生产，其实是比较危险的。</p>
-<h3 id="3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍"><a href="#3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍" class="headerlink" title="3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍"></a>3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍</h3><p>如果可以在一个安全的测试环境里先行验证，有可能先暴露这个问题。</p>
-<p>有些人平时做配置 / 策略变更，习惯往往是很简单的：</p>
-<p>改完之后在控制台点两下、跑一跑页面，发现“看起来还能用”，然后就上生产了。</p>
-<p>如果事先没认真在测试环境里验证一遍，直接上生产环境变更就等于是给未知行为兜底。</p>
-<p>对这类高危变更：</p>
-<ul>
-<li>上生产之前，先在测试 / 预发环境完成测试，如果是阻断策略，也可以通过日志观察比对验证；</li>
-<li>在这个过程中，不需要穷举所有异常，但至少要有意识地想一想、看一看：<ul>
-<li>配置 / 策略拿不到、读错了、大致会长成什么样；</li>
-<li>系统在这种情况下，是还能撑住，还是直接炸掉。</li>
-</ul>
-</li>
-</ul>
-<p>大规模系统里，确实不可能在测试环境推演所有坏情况，这个目标本身就不现实。</p>
-<p>但在上生产之前，至少要做一件事：<strong>不要把“配置 / 策略永远没问题”当成默认前提</strong>，而是先在一个相对安全的环境里，确认一下最基本的正常和异常场景，是否符合预期。</p>
-<h3 id="3-3-灰度：别一上来就全网生效"><a href="#3-3-灰度：别一上来就全网生效" class="headerlink" title="3.3 灰度：别一上来就全网生效"></a>3.3 灰度：别一上来就全网生效</h3><p>即使测试 / 预发环境都跑过了，生产一定会面临更复杂的情况：真实数据、边缘场景、奇怪的调用链、历史遗留配置，都会叠加进来。所以有计划的分批次灰度发布非常重要。几种比较常见、也比较实用的手法：</p>
-<ul>
-<li><strong>按范围灰度</strong><ul>
-<li>按 Region / 机房 / 用户群 / 业务线分批；</li>
-<li>第一批尽量选影响范围小、可观测性好的对象。</li>
-</ul>
-</li>
-<li><strong>先监控，再执行</strong><ul>
-<li>安全策略先以 log-only / monitor-only 的方式 dry run 跑一段时间：<ul>
-<li>记录“如果现在真执行，会拦掉哪些请求”；</li>
-<li>统计“会放过哪些我们不希望放过的请求”；</li>
-</ul>
-</li>
-<li>没有明显问题，再切到 enforce 模式。</li>
-</ul>
-</li>
-<li><strong>做好灰度计划</strong><ul>
-<li>提前定好：灰度的批次，达到什么要求，我们就可以往下放一批；</li>
-</ul>
-</li>
-</ul>
-<p>其实很多时候问题不是“没做灰度”，而是这类配置 / 策略从设计第一天起，就没有灰度控制的能力。当然，如果某条配置一上来就只能全局生效，而且它又处在核心链路，那它本身就是一个需要去解决的技术债。</p>
-<h3 id="3-4-观测能力与跨部门协同：让影响可见可止血"><a href="#3-4-观测能力与跨部门协同：让影响可见可止血" class="headerlink" title="3.4 观测能力与跨部门协同：让影响可见可止血"></a>3.4 观测能力与跨部门协同：让影响可见可止血</h3><p>出问题这件事本身很难完全避免，那接下来就看两件事：</p>
-<ol>
-<li>出了问题，能不能被及时观测到，并且尽快把异常与本次变更关联起来；</li>
-<li>能不能快速拉齐相关方，迅速止血。</li>
-</ol>
-<p><strong>变更发起者（变更 owner）需要对此负责</strong>，对高危配置 / 策略变更来说，变更 owner 的责任不只是“把变更改对”，而是要在发起变更之前，就把下面两点想清楚、准备好，并落在 SOP 中：</p>
-<ul>
-<li>如何判断这次变更是否按预期生效、有没有带来额外副作用；</li>
-<li>一旦出现异常，应该如何处置，触发什么条件需要回滚或熔断。</li>
-</ul>
-<h3 id="3-4-1-观测：变更-owner-要先把观测指标定好"><a href="#3-4-1-观测：变更-owner-要先把观测指标定好" class="headerlink" title="3.4.1 观测：变更 owner 要先把观测指标定好"></a>3.4.1 观测：变更 owner 要先把观测指标定好</h3><p>业务侧的观测一般比较完备。但变更的 owner 并不一定有如同业务一样完备的观测能力和视角。<strong>变更 owner 需要在变更执行前，把与本次变更直接相关的观测能力先对齐好</strong>。对于 SRE、安全这类跨多方的变更，这个过程往往离不开跨部门协同。</p>
-<p>可以具体拆成几件事：</p>
-<ol>
-<li><strong>先列清楚：这次变更可能影响哪些链路、哪些指标</strong><ul>
-<li>我改的是一条安全策略 / 配置规则，它会作用在：<ul>
-<li>哪些入口（网关、CDN、API 网关…）；</li>
-<li>哪些下游（认证、业务服务、数据库 / 缓存…）；</li>
-<li>哪些用户 / 租户 / 区域。</li>
-</ul>
-</li>
-<li>对每一类影响，预先想一遍：<ul>
-<li>正常情况下，哪些指标会有轻微波动（例如某类请求被拒绝率小幅上升）；</li>
-<li>异常情况下，哪些指标会率先发生明显异常（例如某几个接口 5xx 暴涨）。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>与上下游一起梳理异常观测指标和告警信号</strong><ul>
-<li>在发起变更前，变更 owner 主动与相关方对齐两类信息：<ul>
-<li>各方现有的关键观测指标和告警规则：出现异常时优先关注哪些 dashboard / 告警；</li>
-<li>在变更相关的日志 / 指标里，是否需要增加哪些字段，以便后续快速按维度筛查。</li>
-</ul>
-</li>
-<li>理想的状态是：<ul>
-<li>在变更 owner 自己的 dashboard 里，可以看到这次变更涉及的上下游关键指标；</li>
-<li>所有人都清楚“这次变更要重点盯哪几个指标、哪些异常信号一出现就需要进入处置流程”。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>在监控 / 日志里给变更本身留“痕迹”</strong><ul>
-<li>相应的变更系统，至少要做到：<ul>
-<li>能够区分不同的配置 / 策略版本；</li>
-<li>能够在日志或查询里，把“使用新配置 / 新策略”的请求、租户、区域筛选出来。</li>
-</ul>
-</li>
-</ul>
-</li>
-</ol>
-<p>回到这次故障上，本身系统的观测也是有一定问题的，<code>unwrap</code> 导致panic级别的问题应该被捕获并且告警。但如果变更 owner 可以多想多做几步，或许能够更快速地把故障指征归因到他的变更上。</p>
-<h3 id="3-4-2-响应协同：以快速止血为目标"><a href="#3-4-2-响应协同：以快速止血为目标" class="headerlink" title="3.4.2 响应协同：以快速止血为目标"></a>3.4.2 响应协同：以快速止血为目标</h3><p>这次 Cloudflare 故障，从业务异常到定位到特定权限 / 特征文件变更导致的问题，过程拉得很长，很可能的原因是，变更信息没有在上下游充分同步，处置现场一开始也没有足够意识到“这波异常和哪一次变更高度相关”。</p>
-<p>从变更 owner 的视角，可以关注以下几点：</p>
-<ol>
-<li><strong>变更的“共同上下文”要统一</strong><ul>
-<li>每一次高危变更都要有明确的变更 ID / 版本号 / 影响范围（租户、区域、实例批次等），确保上下游知晓；</li>
-</ul>
-</li>
-<li><strong>定义好 SOP，关键指标要提前对齐好</strong><ul>
-<li>结合上文对齐好的观测指标，提前约定好异常指标出现后的处置动作。</li>
-<li>快速恢复动作尽量简单：先按预案降级或回滚，优先保障可用性，安全 / 合规问题通过后续补偿措施兜底。</li>
-</ul>
-</li>
-<li><strong>降级/熔断设计</strong> <ul>
-<li>临时关闭某个依赖路径，不再调用这条有问题的链路；</li>
-<li>将某些策略从“强制阻断”降级为“仅记录 + 限流”；</li>
-<li>对下游返回一个可预期的降级结果，而不是继续把异常往更深的地方传。</li>
-</ul>
-</li>
-<li><strong>恢复链路尽量简单，避免循环依赖</strong><ul>
-<li>典型的循环依赖场景：<ul>
-<li>回滚配置要通过同一套控制面 / 配置系统下发，而这套控制面此刻就因为这次变更不可用；</li>
-<li>执行回滚需要某些权限 / 认证链路，碰巧这次改的就是这层；</li>
-<li>回滚脚本依赖的一些后端服务也在故障链路里，导致脚本半路就跑挂了。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>通过演练把这一套联动跑顺</strong><ul>
-<li>围绕典型高危变更，进行演练。演练不只是看“回滚脚本能不能跑通”。而是验证 SOP 中的观测指标能否与故障场景关联，并及时发起恢复操作。</li>
-<li>演练暴露出来的缺口，都应该复盘更新到 SOP 里。</li>
-</ul>
-</li>
-</ol>
-<h2 id="4-写在最后"><a href="#4-写在最后" class="headerlink" title="4. 写在最后"></a>4. 写在最后</h2><p>首先要给 Cloudflare 点个赞：愿意把问题摊开、把细节讲清楚，是一种非常好的文化。对我们这些旁观者来说，这样的复盘既能照出问题，也能当作一次很好的演练材料。</p>
-<p>在这种上下游链路极其复杂的系统里，一条变更真正会影响什么，很难提前预判。跨部门变更管理、观测、响应尤为重要。这类跨域风险，往往需要横向团队做中枢。</p>
-<p>尤其是对偏上游的同学来说，比如安全运营、策略平台，日常做的很多事情看上去只是“调一条规则”“收紧一点权限”，但站在全局视角，往往就是高风险动作。不要把配置、权限、策略当成理所当然“安全”的东西。如何在团队里把风险意识、影响面判断、事前预案这些东西沉淀成可复制的能力，而不是只靠少数人的经验，需要长期系统性地建设。</p>
-
-                    
-                        
-
-
-                    
-                    
-                        <p>
-                            <a
-                                href="/uncategorized/cloudflare-nov-18-outage-change-perspective/#post-footer"
-                                class="postShorten-excerpt_link link"
-                                aria-label=""
-                            >
-                                Comment and share
-                            </a>
-                        </p>
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-bottom">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
                             href="/uncategorized/cong-biangeng-jiaodu-fupan-cloudflare-11-18-guzhang-0ctf2015-writeup/"
                             aria-label=": 从变更角度“复盘” Cloudflare 11·18 故障0CTF2015 Writeup"
                         >
@@ -898,6 +586,318 @@
                         <p>
                             <a
                                 href="/uncategorized/cong-biangeng-jiaodu-fupan-cloudflare-11-18-guzhang-0ctf2015-writeup/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                Comment and share
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/uncategorized/cloudflare-nov-18-outage-change-perspective/"
+                            aria-label=": 从变更角度“复盘” Cloudflare 11·18 故障"
+                        >
+                            从变更角度“复盘” Cloudflare 11·18 故障
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2025-11-26T21:31:51+08:00">
+	
+		    Nov 26, 2025
+    	
+    </time>
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><p>2025 年 11 月 18 日，Cloudflare 遭遇了一次影响范围不小的故障，导致其部分服务在一段时间内出现明显异常、访问失败或性能下降；具体影响范围可以参考 Cloudflare 在官方博客中发布的复盘报告<a href="https://blog.cloudflare.com/18-november-2025-outage/" target="_blank" rel="noopener">《Cloudflare outage on November 18, 2025》</a>。</p>
+<p>事后 Cloudflare 很快发布了详细的技术复盘报告，把这次故障的来龙去脉讲得比较清楚：<strong>直接诱因是一项数据库权限配置变更</strong>，而下游某些 Rust 服务在异常路径上的健壮性不足，被这次变更“精准命中”，最终演化成大面积的服务不可用。在复盘文章里，可以看到典型的 <code>unwrap</code> 使用导致程序在遇到异常数据时直接崩溃，这一点也迅速成了社区讨论的焦点。</p>
+<p><code>unwrap</code> 确实是这次事故的重要触发点之一，但如果只停留在“不要乱用 unwrap”这个层面，我们能学到的东西其实很有限。<strong>在真实的工程环境里，数据库权限、配置项、安全策略，这类“看起来只是调一下配置”的变更，在研发和安全团队的日常工作中非常常见，而且数量巨大</strong>。很多时候，它们并不会被当成高风险操作对待，更不会被放到和“发一版代码”同等严肃的变更流程里去审视。</p>
+<p>正因为如此，在大家都在吐槽 <code>unwrap</code> 的时候，我更想换一个视角：站在一个局外人的位置，只基于 Cloudflare 公开的技术文章，<strong>从“变更”的角度，来看看这次事故里有哪些稳定性和安全运维层面的经验教训，是我们在日常做配置 / 安全控制变更时可以借鉴的</strong>。</p>
+<h2 id="2-事件回顾和-Cloudflare-的技术报告"><a href="#2-事件回顾和-Cloudflare-的技术报告" class="headerlink" title="2. 事件回顾和 Cloudflare 的技术报告"></a>2. 事件回顾和 Cloudflare 的技术报告</h2><p>在进入后面的讨论之前，我先按照 Cloudflare 官方技术文章里的信息，把这次故障的经过简单串一下。几个关键时间点（UTC）：</p>
+<ul>
+<li><strong>11:05</strong>：数据库访问控制变更部署</li>
+<li><strong>11:28</strong>：影响开始产生（Impact starts）</li>
+<li><strong>13:05</strong>：对 Workers KV / Access 启用 bypass，影响降低</li>
+<li><strong>13:37</strong>：确认 Bot Management 配置文件为触发点，开始回滚/修复至 last-known-good</li>
+<li><strong>14:30</strong>：主要影响解除（Main impact resolved）</li>
+<li><strong>17:06</strong>：所有服务恢复（All services resolved）</li>
+</ul>
+<p>在这个时间线里，Cloudflare 官方给出的故事大致可以拆成以下几步。</p>
+<h3 id="2-1-起点：数据库访问控制变更（11-05-UTC）"><a href="#2-1-起点：数据库访问控制变更（11-05-UTC）" class="headerlink" title="2.1 起点：数据库访问控制变更（11:05 UTC）"></a>2.1 起点：数据库访问控制变更（11:05 UTC）</h3><p>从官方时间线来看，这次事故的起点很清晰：<strong>11:05 UTC，Cloudflare 在一套用于生成 Bot Management 特征配置的数据库上，部署了一次权限相关的配置变更（database access control change）。</strong></p>
+<p>Cloudflare 在复盘里解释，这次变更的初衷是：</p>
+<ul>
+<li>把原本“隐式”的表访问权限改成“显式授权”，</li>
+<li>让分布式查询可以在真实用户账户而不是共享系统账户下执行，</li>
+<li>这样才能对每个用户的查询更细粒度地评估访问授权和查询限额（access grants / query limits），从安全和资源控制角度把关。</li>
+</ul>
+<p>问题在于：生成 Bot Management <strong>feature file（特征配置文件）</strong> 的那条查询并没有显式区分哪些库/表应该被统计进去。变更生效后，这条查询突然多拿到了一批原本不会出现的信息，导致：</p>
+<ul>
+<li>查询结果的行数接近翻倍；</li>
+<li>按这个结果生成的 feature file 体积也明显变大，特征数量远超正常水平；</li>
+<li>这份“变胖了”的配置文件依然按原有节奏在全网周期性刷新和分发。</li>
+</ul>
+<p>就变更本身来说，它在当时<strong>看上去更像是一条常规的权限/安全配置调整</strong>，而不是那种一眼就会被当作“高危大变更”的架构级操作。</p>
+<h3 id="2-2-症状出现：核心流量异常（11-28-UTC-之后）"><a href="#2-2-症状出现：核心流量异常（11-28-UTC-之后）" class="headerlink" title="2.2 症状出现：核心流量异常（11:28 UTC 之后）"></a>2.2 症状出现：核心流量异常（11:28 UTC 之后）</h3><p>官方文章在 “The outage” 一节里，展示了一张 5xx 错误量曲线图：原本很低的错误率在 11 点多突然抬升，并出现一段时间的反复波动。</p>
+<p>在文章末尾的时间线表中，<strong>11:28</strong> 被标记为：</p>
+<blockquote>
+<p>Impact starts. Deployment reaches customer environments, first errors observed on customer HTTP traffic.</p>
+</blockquote>
+<p>对外部用户来说，这一阶段的直接表现就是：</p>
+<ul>
+<li>大量站点返回 Cloudflare 自己的 5xx 错误页；</li>
+<li>Workers KV、Access、Dashboard、Turnstile 等依赖核心代理（Cloudflare 文中称为 core proxy，并用 FL/FL2 指代其不同代际/版本的核心代理组件）的服务出现错误或不可用；</li>
+<li>整体 HTTP 流量表现为“时好时坏”的波动。</li>
+</ul>
+<p>波动的原因在官方报告里也解释得比较清楚：</p>
+<ul>
+<li>feature file 每几分钟重新生成一次并分发到全网；</li>
+<li>ClickHouse 集群在逐步更新，只有已经应用访问控制变更的节点会生成“坏文件”；</li>
+<li>每一轮刷新，有可能生成“好配置”或“坏配置”，然后快速推送，导致系统在“好文件 / 坏文件”之间反复切换。</li>
+</ul>
+<h3 id="2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）"><a href="#2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）" class="headerlink" title="2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）"></a>2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）</h3><p>时间线显示，<strong>11:32–13:05</strong> 这段时间里，团队最初是沿着 <strong>Workers KV 错误和高流量</strong> 的症状在排查：</p>
+<blockquote>
+<p>“The team investigated elevated traffic levels and errors to Workers KV service… mitigations such as traffic manipulation and account limiting were attempted…”</p>
+</blockquote>
+<p>随着排障推进，Cloudflare 在 “The query behaviour change” 与 “Memory preallocation” 两节中，把技术链路写得很直白：</p>
+<ol>
+<li><strong>数据库层</strong>：访问控制变更后，查询时多返回了数据，响应行数接近翻倍；</li>
+<li><strong>配置生成层</strong>：用这条查询生成的 Bot Management feature file 跟着“变胖”，特征数量远超平时（文中描述为 “effectively more than doubling the rows in the response ultimately affecting the number of rows (i.e. features) in the final file output”）；</li>
+<li><strong>核心代理层</strong>：core proxy 上的 Bot Management 模块，为了预分配内存和防止无界增长，对特征数量设了一个硬上限（200，正常使用约 60）；</li>
+<li><p>当超大 feature file 触发这个上限时，核心组件 FL2 的 Rust 代码在检查时调用了 <code>unwrap()</code>，在 Err 分支 panic：</p>
+<blockquote>
+<p>thread fl2_worker_thread panicked: called Result::unwrap() on an Err value</p>
+</blockquote>
+</li>
+</ol>
+<p>时间线中，<strong>13:37</strong> 这一行直接写道：</p>
+<blockquote>
+<p>Work focused on rollback of the Bot Management configuration file to a last-known-good version. We were confident that the Bot Management configuration file was the trigger for the incident.</p>
+</blockquote>
+<p>也就是说，到 13:37 前后，团队已经把问题清楚地收敛到这一链路上：</p>
+<blockquote>
+<p>数据库访问控制变更 → 查询行为变化 → feature file 异常膨胀 → Bot Management 模块触发 unwrap() panic → 核心代理返回大规模 5xx。</p>
+</blockquote>
+<h3 id="2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）"><a href="#2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）" class="headerlink" title="2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）"></a>2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）</h3><p>后续的处置流程在官方时间线里也有完整记录，可以粗略分成三段：</p>
+<ol>
+<li><strong>先压住影响面（13:05 起）</strong><ul>
+<li><strong>13:05</strong>：<blockquote>
+<p>Workers KV and Cloudflare Access bypass implemented — impact reduced.</p>
+</blockquote>
+</li>
+<li>做法是通过内部 bypass，让 Workers KV 和 Access 回退到 core proxy 的旧版本，虽然旧版本同样存在问题，但影响范围和程度都更小，因此整体错误率明显下降。</li>
+</ul>
+</li>
+<li><strong>修配置文件，恢复核心流量（13:37–14:30）</strong><ul>
+<li><strong>13:37</strong>：工作重点转向回滚 Bot Management 配置文件到 last-known-good 版本；</li>
+<li><strong>14:24</strong>：<ul>
+<li>停止生成与分发新的 Bot Management 配置文件；</li>
+<li>使用旧版本配置文件的恢复测试完成；</li>
+</ul>
+</li>
+<li><strong>14:30</strong>：<blockquote>
+<p>Main impact resolved. A correct Bot Management configuration file was deployed globally and most services started operating correctly.</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li><strong>清理长尾，全部恢复（14:30–17:06）</strong><ul>
+<li>核心流量恢复后，剩下的是重启在事故中进入 bad state 的下游服务；</li>
+<li><strong>17:06</strong> ：<blockquote>
+<p>All services resolved. Impact ends. All downstream services restarted and all operations fully restored.</p>
+</blockquote>
+</li>
+</ul>
+</li>
+</ol>
+<p>到这里为止，官方技术报告给出的“工程师视角故事线”就完整了：</p>
+<ul>
+<li>11:05 的数据库访问控制变更改变了系统表查询行为；</li>
+<li>被用于生成 Bot Management 特征配置文件的查询没有过滤 database，导致配置文件异常膨胀；</li>
+<li>核心代理中的 Bot Management 模块在遇到这份“超大配置”时触发 <code>unwrap()</code> panic，引发大规模 5xx；</li>
+<li>通过 bypass 降低影响面、回滚 / 修复配置文件、重启下游服务，在 14:30 解除主体影响，17:06 完成收尾。</li>
+</ul>
+<hr>
+<p>到这里为止，我只是把 Cloudflare 在官方复盘里公开的内容，整理成了一条相对清晰的时间线和技术链路。换句话说：前面的所有事实，都是从那篇博客和时间线表里来的，我并没有也不可能掌握他们内部更多的细节。</p>
+<p>接下来如果从变更和稳定性体系的角度往下展开，就难免会带一点推断和类比。这些推断<strong>有可能和 Cloudflare 内部当时的真实情况并不完全一致</strong>，也不代表我在评价或还原他们的具体决策过程，更谈不上指责。</p>
+<p>更合适的理解是：把这次事故当成一个公开、细节足够丰富的案例，把官方给出的时间线和技术原因当作“题面”，后面的分析只是借这道题来反思我们自己在变更、稳定性上的潜在问题，看看能从中抽象出哪些对自己有用的经验教训。后文更关注机制与流程如何把风险收住，而不是复盘某个具体个人/团队的对错。</p>
+<h2 id="3-从变更视角看这次故障"><a href="#3-从变更视角看这次故障" class="headerlink" title="3. 从变更视角看这次故障"></a>3. 从变更视角看这次故障</h2><p>大家都在讨论 <code>unwrap</code>、错误处理不健壮，但真正把这一串问题引爆的，是一类我们日常也经常做的事情——<strong>改了一条权限 / 策略 / 配置</strong>。</p>
+<p>这类操作在任何公司都很常见：收紧一下权限、加一条安全规则、改一条控制面配置。平时我们可能把它归类成“小变更”。这次事故对我们来说，也是一个“复盘”自查的机会，可以就把它当成一次典型的<strong>高危配置 / 安全策略变更事故</strong>，按变更的几个阶段回头看看：如果同样的事发生在我们系统里，哪些环节我们自己也容易掉链子。</p>
+<p>下面这些都是站在“做事的人”的角度做的“复盘”与自查，不是去评价 Cloudflare 做得好不好。</p>
+<h3 id="3-1-影响面评估：这次变更到底多“高危”"><a href="#3-1-影响面评估：这次变更到底多“高危”" class="headerlink" title="3.1 影响面评估：这次变更到底多“高危”"></a>3.1 影响面评估：这次变更到底多“高危”</h3><p>先看第一步：这次到底改了个什么东西。</p>
+<p>这一类权限 / 策略变更，在日常开发里，很容易被当成“就改一下配置”——不改代码、不发新版本，只是调整一条规则，看起来像是低风险操作。</p>
+<p>评估风险大小至少可以拆成两个维度：</p>
+<ol>
+<li><strong>所处平面和作用域（它在哪一层）</strong><ul>
+<li>是某个单体服务的本地配置，只影响局部行为；</li>
+<li>还是控制面 / 安全面上的全局策略，例如：认证授权、集中配置、路由 / 流量调度这类“公共基础设施”。</li>
+</ul>
+</li>
+<li><strong>依赖关系和影响链路（后面连着谁）</strong><ul>
+<li>有多少关键服务 / 关键路径依赖这条配置 / 策略才能继续往下走；</li>
+<li>它是不是在多条核心链路上的必经节点，是典型的 critical path / chokepoint 还是一个 leaf node。</li>
+</ul>
+</li>
+</ol>
+<p>Cloudflare 这次动的是核心组件访问数据的权限，从复盘描述看，很难把它归类成一个“局部、低影响的本地配置”。在任何一个复杂系统里，这种“全局共享 + 被关键链路反复访问”的配置，按理都应该直接归到高危变更的范畴。</p>
+<p>现实里又有另一个情况：历史系统经过多年演化，上下游依赖关系复杂。但我觉得这时候，仍然有必要做一些自查，多思考几个问题，比如：</p>
+<ul>
+<li>如果这个配置完全失效，用户侧最直观的症状会是什么，最坏情况下，它会导致什么样的影响？</li>
+<li>有哪些关键服务 / 功能一定要依赖这条配置？</li>
+<li>过去的故障 / 变更记录里，有没有跟它相关的坑？</li>
+</ul>
+<p>如果这些问题都答不出一个相对有把握的结论，并不代表这个变更风险就低，反而说明：</p>
+<p>我们现在对它的影响面认知还不够清晰，这种情况下，把它当成“小配置改动”随手上生产，其实是比较危险的。</p>
+<h3 id="3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍"><a href="#3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍" class="headerlink" title="3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍"></a>3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍</h3><p>如果可以在一个安全的测试环境里先行验证，有可能先暴露这个问题。</p>
+<p>有些人平时做配置 / 策略变更，习惯往往是很简单的：</p>
+<p>改完之后在控制台点两下、跑一跑页面，发现“看起来还能用”，然后就上生产了。</p>
+<p>如果事先没认真在测试环境里验证一遍，直接上生产环境变更就等于是给未知行为兜底。</p>
+<p>对这类高危变更：</p>
+<ul>
+<li>上生产之前，先在测试 / 预发环境完成测试，如果是阻断策略，也可以通过日志观察比对验证；</li>
+<li>在这个过程中，不需要穷举所有异常，但至少要有意识地想一想、看一看：<ul>
+<li>配置 / 策略拿不到、读错了、大致会长成什么样；</li>
+<li>系统在这种情况下，是还能撑住，还是直接炸掉。</li>
+</ul>
+</li>
+</ul>
+<p>大规模系统里，确实不可能在测试环境推演所有坏情况，这个目标本身就不现实。</p>
+<p>但在上生产之前，至少要做一件事：<strong>不要把“配置 / 策略永远没问题”当成默认前提</strong>，而是先在一个相对安全的环境里，确认一下最基本的正常和异常场景，是否符合预期。</p>
+<h3 id="3-3-灰度：别一上来就全网生效"><a href="#3-3-灰度：别一上来就全网生效" class="headerlink" title="3.3 灰度：别一上来就全网生效"></a>3.3 灰度：别一上来就全网生效</h3><p>即使测试 / 预发环境都跑过了，生产一定会面临更复杂的情况：真实数据、边缘场景、奇怪的调用链、历史遗留配置，都会叠加进来。所以有计划的分批次灰度发布非常重要。几种比较常见、也比较实用的手法：</p>
+<ul>
+<li><strong>按范围灰度</strong><ul>
+<li>按 Region / 机房 / 用户群 / 业务线分批；</li>
+<li>第一批尽量选影响范围小、可观测性好的对象。</li>
+</ul>
+</li>
+<li><strong>先监控，再执行</strong><ul>
+<li>安全策略先以 log-only / monitor-only 的方式 dry run 跑一段时间：<ul>
+<li>记录“如果现在真执行，会拦掉哪些请求”；</li>
+<li>统计“会放过哪些我们不希望放过的请求”；</li>
+</ul>
+</li>
+<li>没有明显问题，再切到 enforce 模式。</li>
+</ul>
+</li>
+<li><strong>做好灰度计划</strong><ul>
+<li>提前定好：灰度的批次，达到什么要求，我们就可以往下放一批；</li>
+</ul>
+</li>
+</ul>
+<p>其实很多时候问题不是“没做灰度”，而是这类配置 / 策略从设计第一天起，就没有灰度控制的能力。当然，如果某条配置一上来就只能全局生效，而且它又处在核心链路，那它本身就是一个需要去解决的技术债。</p>
+<h3 id="3-4-观测能力与跨部门协同：让影响可见可止血"><a href="#3-4-观测能力与跨部门协同：让影响可见可止血" class="headerlink" title="3.4 观测能力与跨部门协同：让影响可见可止血"></a>3.4 观测能力与跨部门协同：让影响可见可止血</h3><p>出问题这件事本身很难完全避免，那接下来就看两件事：</p>
+<ol>
+<li>出了问题，能不能被及时观测到，并且尽快把异常与本次变更关联起来；</li>
+<li>能不能快速拉齐相关方，迅速止血。</li>
+</ol>
+<p><strong>变更发起者（变更 owner）需要对此负责</strong>，对高危配置 / 策略变更来说，变更 owner 的责任不只是“把变更改对”，而是要在发起变更之前，就把下面两点想清楚、准备好，并落在 SOP 中：</p>
+<ul>
+<li>如何判断这次变更是否按预期生效、有没有带来额外副作用；</li>
+<li>一旦出现异常，应该如何处置，触发什么条件需要回滚或熔断。</li>
+</ul>
+<h3 id="3-4-1-观测：变更-owner-要先把观测指标定好"><a href="#3-4-1-观测：变更-owner-要先把观测指标定好" class="headerlink" title="3.4.1 观测：变更 owner 要先把观测指标定好"></a>3.4.1 观测：变更 owner 要先把观测指标定好</h3><p>业务侧的观测一般比较完备。但变更的 owner 并不一定有如同业务一样完备的观测能力和视角。<strong>变更 owner 需要在变更执行前，把与本次变更直接相关的观测能力先对齐好</strong>。对于 SRE、安全这类跨多方的变更，这个过程往往离不开跨部门协同。</p>
+<p>可以具体拆成几件事：</p>
+<ol>
+<li><strong>先列清楚：这次变更可能影响哪些链路、哪些指标</strong><ul>
+<li>我改的是一条安全策略 / 配置规则，它会作用在：<ul>
+<li>哪些入口（网关、CDN、API 网关…）；</li>
+<li>哪些下游（认证、业务服务、数据库 / 缓存…）；</li>
+<li>哪些用户 / 租户 / 区域。</li>
+</ul>
+</li>
+<li>对每一类影响，预先想一遍：<ul>
+<li>正常情况下，哪些指标会有轻微波动（例如某类请求被拒绝率小幅上升）；</li>
+<li>异常情况下，哪些指标会率先发生明显异常（例如某几个接口 5xx 暴涨）。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>与上下游一起梳理异常观测指标和告警信号</strong><ul>
+<li>在发起变更前，变更 owner 主动与相关方对齐两类信息：<ul>
+<li>各方现有的关键观测指标和告警规则：出现异常时优先关注哪些 dashboard / 告警；</li>
+<li>在变更相关的日志 / 指标里，是否需要增加哪些字段，以便后续快速按维度筛查。</li>
+</ul>
+</li>
+<li>理想的状态是：<ul>
+<li>在变更 owner 自己的 dashboard 里，可以看到这次变更涉及的上下游关键指标；</li>
+<li>所有人都清楚“这次变更要重点盯哪几个指标、哪些异常信号一出现就需要进入处置流程”。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>在监控 / 日志里给变更本身留“痕迹”</strong><ul>
+<li>相应的变更系统，至少要做到：<ul>
+<li>能够区分不同的配置 / 策略版本；</li>
+<li>能够在日志或查询里，把“使用新配置 / 新策略”的请求、租户、区域筛选出来。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>回到这次故障上，本身系统的观测也是有一定问题的，<code>unwrap</code> 导致panic级别的问题应该被捕获并且告警。但如果变更 owner 可以多想多做几步，或许能够更快速地把故障指征归因到他的变更上。</p>
+<h3 id="3-4-2-响应协同：以快速止血为目标"><a href="#3-4-2-响应协同：以快速止血为目标" class="headerlink" title="3.4.2 响应协同：以快速止血为目标"></a>3.4.2 响应协同：以快速止血为目标</h3><p>这次 Cloudflare 故障，从业务异常到定位到特定权限 / 特征文件变更导致的问题，过程拉得很长，很可能的原因是，变更信息没有在上下游充分同步，处置现场一开始也没有足够意识到“这波异常和哪一次变更高度相关”。</p>
+<p>从变更 owner 的视角，可以关注以下几点：</p>
+<ol>
+<li><strong>变更的“共同上下文”要统一</strong><ul>
+<li>每一次高危变更都要有明确的变更 ID / 版本号 / 影响范围（租户、区域、实例批次等），确保上下游知晓；</li>
+</ul>
+</li>
+<li><strong>定义好 SOP，关键指标要提前对齐好</strong><ul>
+<li>结合上文对齐好的观测指标，提前约定好异常指标出现后的处置动作。</li>
+<li>快速恢复动作尽量简单：先按预案降级或回滚，优先保障可用性，安全 / 合规问题通过后续补偿措施兜底。</li>
+</ul>
+</li>
+<li><strong>降级/熔断设计</strong> <ul>
+<li>临时关闭某个依赖路径，不再调用这条有问题的链路；</li>
+<li>将某些策略从“强制阻断”降级为“仅记录 + 限流”；</li>
+<li>对下游返回一个可预期的降级结果，而不是继续把异常往更深的地方传。</li>
+</ul>
+</li>
+<li><strong>恢复链路尽量简单，避免循环依赖</strong><ul>
+<li>典型的循环依赖场景：<ul>
+<li>回滚配置要通过同一套控制面 / 配置系统下发，而这套控制面此刻就因为这次变更不可用；</li>
+<li>执行回滚需要某些权限 / 认证链路，碰巧这次改的就是这层；</li>
+<li>回滚脚本依赖的一些后端服务也在故障链路里，导致脚本半路就跑挂了。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>通过演练把这一套联动跑顺</strong><ul>
+<li>围绕典型高危变更，进行演练。演练不只是看“回滚脚本能不能跑通”。而是验证 SOP 中的观测指标能否与故障场景关联，并及时发起恢复操作。</li>
+<li>演练暴露出来的缺口，都应该复盘更新到 SOP 里。</li>
+</ul>
+</li>
+</ol>
+<h2 id="4-写在最后"><a href="#4-写在最后" class="headerlink" title="4. 写在最后"></a>4. 写在最后</h2><p>首先要给 Cloudflare 点个赞：愿意把问题摊开、把细节讲清楚，是一种非常好的文化。对我们这些旁观者来说，这样的复盘既能照出问题，也能当作一次很好的演练材料。</p>
+<p>在这种上下游链路极其复杂的系统里，一条变更真正会影响什么，很难提前预判。跨部门变更管理、观测、响应尤为重要。这类跨域风险，往往需要横向团队做中枢。</p>
+<p>尤其是对偏上游的同学来说，比如安全运营、策略平台，日常做的很多事情看上去只是“调一条规则”“收紧一点权限”，但站在全局视角，往往就是高风险动作。不要把配置、权限、策略当成理所当然“安全”的东西。如何在团队里把风险意识、影响面判断、事前预案这些东西沉淀成可复制的能力，而不是只靠少数人的经验，需要长期系统性地建设。</p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/uncategorized/cloudflare-nov-18-outage-change-perspective/#post-footer"
                                 class="postShorten-excerpt_link link"
                                 aria-label=""
                             >
