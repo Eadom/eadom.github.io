@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>BCTF2014线上赛crypto400地铁难挤writeup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"地铁难挤: 400 描述\n米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得需要上车的人都上车，需要下车的人都下车。218.2.197.242:6000 or 218.2.197.243:6000\n提示\n此题是PPC 1. 地铁和车都是背景描述而已，和题目没关系，本题的目标就是让左边的人 L 都到 右边去，右边的人 R 都到左边来 2. 人的移动规则和游戏规则需要大家遍历出来，每次输入一个数字(20以内)   都不知道PPC什么意思。。反正先连接上去看看    要算一个sha1，先写了个python跑了一次X是三位的，但是发现每次连接字符串都会变。。。只能取得了再跑，后来发现用python写的会超时。。。然后尝试用hashcat来破 命令如下command = ‘cudaHashcat64 –custom-charset1 ?l?u?d -m 100 -a 3 “+result+” “+base+”?1?1?1?1”‘   连上之后是一个什么游戏。。。  玩了半天，再根据题意。规则是空格分隔左右两边，最后要让L都到右边，R都到左边。 一次输入一个数字，代表这个字符串的第几个位置（空格也算一个位置），让这个位置上的人往另外一侧移动 一次最多只能移动两个人 如LRLRLRLRL R 输入9,，就变成LRLRLRLR LR 如LRLRLRLRL R 输入8，就变成LRLRLRL LRR，即两个人都到另一侧，并且互换位置 若输入不合法则返回wrong answer游戏失败。   下面就是游戏的算法啦 xin5739写的\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123124125126127128129130131132133134135136137138139140141142143144145146147148149150151152153154155156157158159160161162163164165166167168169170171172173174175176177178179180181182183184185186187188189190//xin5739#include &lt;iostream&gt;#include&lt;string&gt;#include&lt;cstring&gt;#include&lt;cstdio&gt;#include \"queue\"#define INF 100000000using namespace std;int sta\\[1&lt;&lt;22\\]\\[22\\];int opp\\[1&lt;&lt;22\\]\\[22\\],ops\\[1&lt;&lt;22\\]\\[22\\],anss\\[1&lt;&lt;22\\]\\[22\\];int len;int judge(int s,int p)//判断是否达到目标,p是空格位置&#123;     for (int i=0;i&lt;len;i++)     &#123;           if(i&lt;p&amp;&amp;(s&amp;(1&lt;&lt;i))==0) return 0;           if(i&gt;p&amp;&amp;(s&amp;(1&lt;&lt;i))==1) return 0;     &#125;     return 1;&#125;int check(int s,int &amp;p,int &amp;now)//检查是否是合法移动,p是空格位置&#123;       int x,y;       x=p;y=now;       if(x==y) return -1;       int f0=0,f1=0;       if(x&gt;y)       &#123;             x--;             int t=x;x=y;y=t;       &#125;       else x++;       for (int i=x;i&lt;=y;i++)       &#123;            if(s&amp;(1&lt;&lt;i)) f1=1;            else f0=1;       &#125;       if(f1==1&amp;&amp;f0==1)       &#123;            if(y-x+1&gt;2) return -1;            if(p&lt;x)//pxy-&gt;yxp            &#123;                  if(s&amp;(1&lt;&lt;y))                  &#123;                      s|=(1&lt;&lt;p);                      s^=(1&lt;&lt;y);                  &#125;                  else if(s&amp;(1&lt;&lt;p)) s^=(1&lt;&lt;p);                  now=p;                  p=y;            &#125;            else //xyp-&gt;pyx            &#123;                if(s&amp;(1&lt;&lt;x))                &#123;                    s|=(1&lt;&lt;p);                    s^=(1&lt;&lt;x);                &#125;                 else if(s&amp;(1&lt;&lt;p)) s^=(1&lt;&lt;p);                 now=p;                p=x;            &#125;            return s;       &#125;       else       &#123;           if(p&lt;x) //pxxxx-&gt;xxxxp           &#123;                 for (int j=p;j&lt;y;j++)                 &#123;                      if(s&amp;(1&lt;&lt;(j+1)))                      &#123;                            s|=(1&lt;&lt;j);                      &#125;                      else if(s&amp;(1&lt;&lt;j)) s^=(1&lt;&lt;j);                  &#125;                 if(s&amp;(1&lt;&lt;y)) s^=(1&lt;&lt;y);                 now=p;                 p=y;           &#125;           else //xxxxp-&gt;pxxxx           &#123;              // if(p!=y+1) printf(\"1111213123\");                for (int j=p;j&gt;x;j--)                &#123;                    if(s&amp;(1&lt;&lt;(j-1)))                    &#123;                        s|=(1&lt;&lt;j);                    &#125;                    else if(s&amp;(1&lt;&lt;j)) s^=(1&lt;&lt;j);                &#125;                if(s&amp;(1&lt;&lt;x)) s^=(1&lt;&lt;x);                now=p;                p=x;           &#125;           return s;       &#125;       return -1;&#125;struct node&#123;    int s,p;&#125;;void bin2str(int s,int p)&#123;    for (int i=0;i&lt;len;i++)    &#123;        if(i==p) printf(\" \");        else if(s&amp;(1&lt;&lt;i)) printf(\"R\");        else printf(\"L\");    &#125;    printf(\"n\");&#125;void bfs()&#123;    queue&lt;node&gt;q;    node z;    memset(sta,-1,sizeof(sta));    int i;    int s,p;    for (i=0;i&lt;len;i++)    &#123;        s=0;p=i;        int j;        for(j=0;j&lt;p;j++) s|=(1&lt;&lt;j);        z.s=s;z.p=p;        q.push(z);    //  bin2str(s,p);        sta\\[s\\]\\[p\\]=0;    &#125;    while(!q.empty())    &#123;        z=q.front();        q.pop();        for (i=0;i&lt;len;i++)        &#123;              int t=z.p,now=i;              int x=check(z.s,t,now);              if(sta\\[x\\]\\[t\\]==-1||sta\\[z.s\\]\\[z.p\\]+1&lt;sta\\[x\\]\\[t\\])              &#123;                    node a;                    sta\\[x\\]\\[t\\]=sta\\[z.s\\]\\[z.p\\]+1;                    a.s=x;a.p=t;                    opp\\[x\\]\\[t\\]=z.p; ops\\[x\\]\\[t\\]=z.s;anss\\[x\\]\\[t\\]=now;                    q.push(a);//                  bin2str(x,t);//                  x=check(x,t,now);//                  printf(\"%dn\",now);//                  bin2str(x,t);              &#125;        &#125;    &#125;&#125;void solve(int s,int p)&#123;     if(sta\\[s\\]\\[p\\]==0)      &#123;    //    bin2str(s,p);        // //if(judge(s,p))printf(\"11111n\");         return;     &#125;//   bin2str(s,p);     printf(\"%dn\",anss\\[s\\]\\[p\\]+1);     solve(ops\\[s\\]\\[p\\],opp\\[s\\]\\[p\\]);&#125;int main() &#123;//  freopen(\"E:\\\\in.txt\",\"r\",stdin);//  freopen(\"E:\\\\out.txt\",\"w\",stdout);    char str\\[22\\];    gets(str);    //printf(\"%sn\",str);    len=strlen(str);    int s=0,p;    for (int i=0;i&lt;len;i++)    &#123;          if(str\\[i\\]==' ') p=i;          else if(str\\[i\\]=='R') s|=(1&lt;&lt;i);    &#125;//  printf(\"%d %dn\",s,p);//  int now=8;//  s=check(s,p,now);//  bin2str(s,p);    bfs();//  printf(\"%dn\",sta\\[s\\]\\[p\\]);    solve(s,p);    return 0;&#125;\n后来我写的\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112//ROIS_yufan//BCTF_crypto400#include \"stdio.h\"#include \"string.h\"char czInput\\[20\\];const int len = 16;void PrintQueue()&#123;    //printf(\"%sn\", czInput);&#125;void PrintRst(int rst)&#123;    printf(\"%dn\", rst + 1);&#125;void ShiftSpace(int iWhere)&#123;    int iSpace;    for (iSpace = 0; iSpace &lt; len; iSpace++)    &#123;        if (czInput\\[iSpace\\] == ' ')        &#123;            break;        &#125;    &#125;    if (iSpace &lt; iWhere)    &#123;        while (iSpace != iWhere)        &#123;            iSpace++;            PrintRst(iSpace);            czInput\\[iSpace - 1\\] = czInput\\[iSpace\\];            czInput\\[iSpace\\] = ' ';            PrintQueue();        &#125;    &#125;    else if (iSpace &gt; iWhere)    &#123;        while (iSpace != iWhere)        &#123;            iSpace--;            PrintRst(iSpace);            czInput\\[iSpace + 1\\] = czInput\\[iSpace\\];            czInput\\[iSpace\\] = ' ';            PrintQueue();        &#125;    &#125;&#125;void RoolL(int curL)&#123;    if (curL &gt; 0)    &#123;        ShiftSpace(curL + 1);    &#125;    //最左的L特例    else    &#123;        ShiftSpace(curL + 2);    &#125;&#125;void SwapToRight(int iSpace)&#123;    //最左的L特例    if (iSpace == 1)    &#123;        iSpace++;    &#125;    PrintRst(iSpace - 2);    czInput\\[iSpace\\] = czInput\\[iSpace - 2\\];    czInput\\[iSpace - 2\\] = ' ';    PrintQueue();&#125;void main()&#123;    gets(czInput);    int i;    for (i = len - 1; i &gt;= 0; i--)    &#123;        if (czInput\\[i\\] != 'L')        &#123;            for (int j = i - 1; j &gt;= 0; j--)            &#123;                if (czInput\\[j\\] == 'L')                &#123;                    RoolL(j);                    SwapToRight(j + 1);                    i = len;                    break;                &#125;            &#125;        &#125;    &#125;    for (i = 0; i &lt; len; i++)    &#123;        if (czInput\\[i\\] == ' ')        &#123;            PrintRst(i + 1);            break;        &#125;    &#125;&#125;\n然后写个脚本玩游戏就好啦。\n12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576#!/usr/bin/env python  #\\-\\*\\- coding:utf-8 -*-\"\"\"BCTF_crypto300ROIS_yufan\"\"\"import sysimport osimport base64,binascii,zlibimport hashlibimport re, socketcommand = 'cudaHashcat64 --custom-charset1 ?l?u?d -m 100 -a 3 \"+result+\" \"+base+\"?1?1?1?1\"'def run(result, base):    f = os.popen(\"oclHashcat-1.01cudaHashcat64.exe --custom-charset1 ?l?u?d -m 100 -a 3 \"+result+\" \"+base+\"?1?1?1?1\");    return f.read()def getrst(str, result, base):    partten = re.compile(result + r':('+base+'....'+')')    return str\\[str.find(result)+41:str.find(result)+61\\]def main():    HOST = '218.2.197.242'    # The remote host    PORT = 6000              # The same port as used by the server    s = socket.socket(socket.AF\\_INET, socket.SOCK\\_STREAM)    s.connect((HOST, PORT))    print s.recv(1024)    strrecv = s.recv(1024)    print strrecv\\#    strrecv = 'SHA1(\"5kEQPr0sul1aWUBb\" + X).hexdigest() == \"952792a53660aac0cc4d9eb1277f9b00d0ebf48c\", X is a string of alphanumeric'    partten = re.compile(r'SHA1(\"(.*)\" ')    base = partten.findall(strrecv)\\[0\\]    partten = re.compile(r'== \"(.*)\"')    result = partten.findall(strrecv)\\[0\\]    print base    print result\\#    result = '848656a9e7f76052e8a73d42d17ec02400732e06'\\#    base = 'rVYQ76B4IJdCzy8m'    rst = getrst(run(result, base), result, base)    print rst    s.sendall(rst\\[-4:\\]+'n')    print s.recv(1024)    while(1):        strrecv = s.recv(1024)        print repr(strrecv)        pattern = re.compile(r'\\[LR \\]+n')        if not pattern.search(strrecv):            strrecv = s.recv(1024)        strrecv = pattern.findall(strrecv)\\[0\\]        print strrecv        f = os.popen(\"c4.exe \"+strrecv.replace(' ', '*'))        for line in f:            print repr(line)            s.sendall(line)            strrecv = s.recv(1024)    #        pattern = re.compile(r'\\[LR \\]+n')    #        strrecv = pattern.findall(strrecv)\\[0\\]            print strrecv    print s.recv(1024)\\#    while len(strrecv):\\#        input = raw_input()\\#        s.sendall(input+'n')\\#        strrecv = s.recv(1024)\\#        pattern = re.compile(r'\\[LR \\]+n')\\#        strrecv = pattern.findall(strrecv)\\[0\\]\\#        print strrecv    returnif \\_\\_name\\_\\_ == '\\_\\_main\\_\\_':    main()\n\n","dateCreated":"2014-04-02T15:44:24+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-04-02T15:44:24+08:00","description":"","headline":"BCTF2014线上赛crypto400地铁难挤writeup","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/","keywords":"writeup, bctf"}</script>
+    <meta name="description" content="地铁难挤: 400 描述 米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta name="keywords" content="writeup,bctf">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="BCTF2014线上赛crypto400地铁难挤writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="地铁难挤: 400 描述 米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312161341546?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:image" content="http://img.blog.csdn.net/20140312162923125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.766Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BCTF2014线上赛crypto400地铁难挤writeup">
+<meta name="twitter:description" content="地铁难挤: 400 描述 米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得">
+<meta name="twitter:image" content="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            BCTF2014线上赛crypto400地铁难挤writeup
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-04-02T15:44:24+08:00">
+	
+		    Apr 02, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>地铁难挤: 400 描述</p>
+<p>米特尼克需要用社工办法 拿到THU安全专家的磁盘镜像以了解更多信息，于是他收买了THU专家的博士生，来到BJ市需要与博士生当面联系。但是，来到BJ市之后遇到的第一个问题 就是交通。BJ市人满为患，上下地铁时人们也不先下后上，而是互相挤。左边的人想挤到右边下车，右边的人也想挤到左边上车。你作为米特尼克在BJ的一位小 伙伴，能否帮他和所有乘客设计一个尽量少移动次数的方案，使得需要上车的人都上车，需要下车的人都下车。218.2.197.242:6000 or 218.2.197.243:6000</p>
+<p>提示</p>
+<p>此题是PPC 1. 地铁和车都是背景描述而已，和题目没关系，本题的目标就是让左边的人 L 都到 右边去，右边的人 R 都到左边来 2. 人的移动规则和游戏规则需要大家遍历出来，每次输入一个数字(20以内)   都不知道PPC什么意思。。反正先连接上去看看 <img src="http://img.blog.csdn.net/20140312161003125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt>   要算一个sha1，先写了个python跑了一次X是三位的，但是发现每次连接字符串都会变。。。只能取得了再跑，后来发现用python写的会超时。。。然后尝试用hashcat来破 命令如下command = ‘cudaHashcat64 –custom-charset1 ?l?u?d -m 100 -a 3 “+result+” “+base+”?1?1?1?1”‘   连上之后是一个什么游戏。。。 <img src="http://img.blog.csdn.net/20140312161341546?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt> 玩了半天，再根据题意。规则是空格分隔左右两边，最后要让L都到右边，R都到左边。 一次输入一个数字，代表这个字符串的第几个位置（空格也算一个位置），让这个位置上的人往另外一侧移动 一次最多只能移动两个人 如LRLRLRLRL R 输入9,，就变成LRLRLRLR LR 如LRLRLRLRL R 输入8，就变成LRLRLRL LRR，即两个人都到另一侧，并且互换位置 若输入不合法则返回wrong answer游戏失败。   下面就是游戏的算法啦 xin5739写的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//xin5739</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;string&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;cstring&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;cstdio&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"queue"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INF 100000000</span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="built_in">std</span>;</span><br><span class="line"><span class="keyword">int</span> sta\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\];</span><br><span class="line"><span class="keyword">int</span> opp\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\],ops\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\],anss\[<span class="number">1</span>&lt;&lt;<span class="number">22</span>\]\[<span class="number">22</span>\];</span><br><span class="line"><span class="keyword">int</span> len;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">judge</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span><span class="comment">//判断是否达到目标,p是空格位置</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">     <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</span><br><span class="line">     &#123;</span><br><span class="line">           <span class="keyword">if</span>(i&lt;p&amp;&amp;(s&amp;(<span class="number">1</span>&lt;&lt;i))==<span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">           <span class="keyword">if</span>(i&gt;p&amp;&amp;(s&amp;(<span class="number">1</span>&lt;&lt;i))==<span class="number">1</span>) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">check</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> &amp;p,<span class="keyword">int</span> &amp;now)</span><span class="comment">//检查是否是合法移动,p是空格位置</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">       <span class="keyword">int</span> x,y;</span><br><span class="line">       x=p;y=now;</span><br><span class="line">       <span class="keyword">if</span>(x==y) <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">       <span class="keyword">int</span> f0=<span class="number">0</span>,f1=<span class="number">0</span>;</span><br><span class="line">       <span class="keyword">if</span>(x&gt;y)</span><br><span class="line">       &#123;</span><br><span class="line">             x--;</span><br><span class="line">             <span class="keyword">int</span> t=x;x=y;y=t;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">else</span> x++;</span><br><span class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> i=x;i&lt;=y;i++)</span><br><span class="line">       &#123;</span><br><span class="line">            <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;i)) f1=<span class="number">1</span>;</span><br><span class="line">            <span class="keyword">else</span> f0=<span class="number">1</span>;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">if</span>(f1==<span class="number">1</span>&amp;&amp;f0==<span class="number">1</span>)</span><br><span class="line">       &#123;</span><br><span class="line">            <span class="keyword">if</span>(y-x+<span class="number">1</span>&gt;<span class="number">2</span>) <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">            <span class="keyword">if</span>(p&lt;x)<span class="comment">//pxy-&gt;yxp</span></span><br><span class="line">            &#123;</span><br><span class="line">                  <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;y))</span><br><span class="line">                  &#123;</span><br><span class="line">                      s|=(<span class="number">1</span>&lt;&lt;p);</span><br><span class="line">                      s^=(<span class="number">1</span>&lt;&lt;y);</span><br><span class="line">                  &#125;</span><br><span class="line">                  <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;p)) s^=(<span class="number">1</span>&lt;&lt;p);</span><br><span class="line">                  now=p;</span><br><span class="line">                  p=y;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> <span class="comment">//xyp-&gt;pyx</span></span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;x))</span><br><span class="line">                &#123;</span><br><span class="line">                    s|=(<span class="number">1</span>&lt;&lt;p);</span><br><span class="line">                    s^=(<span class="number">1</span>&lt;&lt;x);</span><br><span class="line">                &#125;</span><br><span class="line">                 <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;p)) s^=(<span class="number">1</span>&lt;&lt;p);</span><br><span class="line">                 now=p;</span><br><span class="line">                p=x;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> s;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">else</span></span><br><span class="line">       &#123;</span><br><span class="line">           <span class="keyword">if</span>(p&lt;x) <span class="comment">//pxxxx-&gt;xxxxp</span></span><br><span class="line">           &#123;</span><br><span class="line">                 <span class="keyword">for</span> (<span class="keyword">int</span> j=p;j&lt;y;j++)</span><br><span class="line">                 &#123;</span><br><span class="line">                      <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;(j+<span class="number">1</span>)))</span><br><span class="line">                      &#123;</span><br><span class="line">                            s|=(<span class="number">1</span>&lt;&lt;j);</span><br><span class="line">                      &#125;</span><br><span class="line">                      <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;j)) s^=(<span class="number">1</span>&lt;&lt;j); </span><br><span class="line">                 &#125;</span><br><span class="line">                 <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;y)) s^=(<span class="number">1</span>&lt;&lt;y);</span><br><span class="line">                 now=p;</span><br><span class="line">                 p=y;</span><br><span class="line">           &#125;</span><br><span class="line">           <span class="keyword">else</span> <span class="comment">//xxxxp-&gt;pxxxx</span></span><br><span class="line">           &#123;</span><br><span class="line">              <span class="comment">// if(p!=y+1) printf("1111213123");</span></span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> j=p;j&gt;x;j--)</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;(j<span class="number">-1</span>)))</span><br><span class="line">                    &#123;</span><br><span class="line">                        s|=(<span class="number">1</span>&lt;&lt;j);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;j)) s^=(<span class="number">1</span>&lt;&lt;j);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;x)) s^=(<span class="number">1</span>&lt;&lt;x);</span><br><span class="line">                now=p;</span><br><span class="line">                p=x;</span><br><span class="line">           &#125;</span><br><span class="line">           <span class="keyword">return</span> s;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">node</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">int</span> s,p;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bin2str</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span>(i==p) <span class="built_in">printf</span>(<span class="string">" "</span>);</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(s&amp;(<span class="number">1</span>&lt;&lt;i)) <span class="built_in">printf</span>(<span class="string">"R"</span>);</span><br><span class="line">        <span class="keyword">else</span> <span class="built_in">printf</span>(<span class="string">"L"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bfs</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">queue</span>&lt;node&gt;q;</span><br><span class="line">    node z;</span><br><span class="line">    <span class="built_in">memset</span>(sta,<span class="number">-1</span>,<span class="keyword">sizeof</span>(sta));</span><br><span class="line">    <span class="keyword">int</span> i;</span><br><span class="line">    <span class="keyword">int</span> s,p;</span><br><span class="line">    <span class="keyword">for</span> (i=<span class="number">0</span>;i&lt;len;i++)</span><br><span class="line">    &#123;</span><br><span class="line">        s=<span class="number">0</span>;p=i;</span><br><span class="line">        <span class="keyword">int</span> j;</span><br><span class="line">        <span class="keyword">for</span>(j=<span class="number">0</span>;j&lt;p;j++) s|=(<span class="number">1</span>&lt;&lt;j);</span><br><span class="line">        z.s=s;z.p=p;</span><br><span class="line">        q.push(z);</span><br><span class="line">    <span class="comment">//  bin2str(s,p);</span></span><br><span class="line">        sta\[s\]\[p\]=<span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span>(!q.empty())</span><br><span class="line">    &#123;</span><br><span class="line">        z=q.front();</span><br><span class="line">        q.pop();</span><br><span class="line">        <span class="keyword">for</span> (i=<span class="number">0</span>;i&lt;len;i++)</span><br><span class="line">        &#123;</span><br><span class="line">              <span class="keyword">int</span> t=z.p,now=i;</span><br><span class="line">              <span class="keyword">int</span> x=check(z.s,t,now);</span><br><span class="line">              <span class="keyword">if</span>(sta\[x\]\[t\]==<span class="number">-1</span>||sta\[z.s\]\[z.p\]+<span class="number">1</span>&lt;sta\[x\]\[t\])</span><br><span class="line">              &#123;</span><br><span class="line">                    node a;</span><br><span class="line"></span><br><span class="line">                    sta\[x\]\[t\]=sta\[z.s\]\[z.p\]+<span class="number">1</span>;</span><br><span class="line">                    a.s=x;a.p=t;</span><br><span class="line">                    opp\[x\]\[t\]=z.p; ops\[x\]\[t\]=z.s;anss\[x\]\[t\]=now;</span><br><span class="line">                    q.push(a);</span><br><span class="line"><span class="comment">//                  bin2str(x,t);</span></span><br><span class="line"><span class="comment">//                  x=check(x,t,now);</span></span><br><span class="line"><span class="comment">//                  printf("%dn",now);</span></span><br><span class="line"><span class="comment">//                  bin2str(x,t);</span></span><br><span class="line">              &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">solve</span><span class="params">(<span class="keyword">int</span> s,<span class="keyword">int</span> p)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">     <span class="keyword">if</span>(sta\[s\]\[p\]==<span class="number">0</span>) </span><br><span class="line">     &#123;</span><br><span class="line">    <span class="comment">//    bin2str(s,p);</span></span><br><span class="line">        <span class="comment">// //if(judge(s,p))printf("11111n");</span></span><br><span class="line">         <span class="keyword">return</span>;</span><br><span class="line">     &#125;</span><br><span class="line"><span class="comment">//   bin2str(s,p);</span></span><br><span class="line">     <span class="built_in">printf</span>(<span class="string">"%dn"</span>,anss\[s\]\[p\]+<span class="number">1</span>);</span><br><span class="line">     solve(ops\[s\]\[p\],opp\[s\]\[p\]);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line"><span class="comment">//  freopen("E:\\in.txt","r",stdin);</span></span><br><span class="line"><span class="comment">//  freopen("E:\\out.txt","w",stdout);</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">char</span> str\[<span class="number">22</span>\];</span><br><span class="line">    gets(str);</span><br><span class="line">    <span class="comment">//printf("%sn",str);</span></span><br><span class="line">    len=<span class="built_in">strlen</span>(str);</span><br><span class="line">    <span class="keyword">int</span> s=<span class="number">0</span>,p;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;len;i++)</span><br><span class="line">    &#123;</span><br><span class="line">          <span class="keyword">if</span>(str\[i\]==<span class="string">' '</span>) p=i;</span><br><span class="line">          <span class="keyword">else</span> <span class="keyword">if</span>(str\[i\]==<span class="string">'R'</span>) s|=(<span class="number">1</span>&lt;&lt;i);</span><br><span class="line">    &#125;</span><br><span class="line"><span class="comment">//  printf("%d %dn",s,p);</span></span><br><span class="line"><span class="comment">//  int now=8;</span></span><br><span class="line"><span class="comment">//  s=check(s,p,now);</span></span><br><span class="line"><span class="comment">//  bin2str(s,p);</span></span><br><span class="line">    bfs();</span><br><span class="line"><span class="comment">//  printf("%dn",sta\[s\]\[p\]);</span></span><br><span class="line">    solve(s,p);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>后来我写的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//ROIS_yufan</span></span><br><span class="line"><span class="comment">//BCTF_crypto400</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"stdio.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"string.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">char</span> czInput\[<span class="number">20</span>\];</span><br><span class="line"><span class="keyword">const</span> <span class="keyword">int</span> len = <span class="number">16</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">PrintQueue</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//printf("%sn", czInput);</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">PrintRst</span><span class="params">(<span class="keyword">int</span> rst)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"%dn"</span>, rst + <span class="number">1</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">ShiftSpace</span><span class="params">(<span class="keyword">int</span> iWhere)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> iSpace;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (iSpace = <span class="number">0</span>; iSpace &lt; len; iSpace++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (czInput\[iSpace\] == <span class="string">' '</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (iSpace &lt; iWhere)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">while</span> (iSpace != iWhere)</span><br><span class="line">        &#123;</span><br><span class="line">            iSpace++;</span><br><span class="line">            PrintRst(iSpace);</span><br><span class="line">            czInput\[iSpace - <span class="number">1</span>\] = czInput\[iSpace\];</span><br><span class="line">            czInput\[iSpace\] = <span class="string">' '</span>;</span><br><span class="line">            PrintQueue();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (iSpace &gt; iWhere)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">while</span> (iSpace != iWhere)</span><br><span class="line">        &#123;</span><br><span class="line">            iSpace--;</span><br><span class="line">            PrintRst(iSpace);</span><br><span class="line">            czInput\[iSpace + <span class="number">1</span>\] = czInput\[iSpace\];</span><br><span class="line">            czInput\[iSpace\] = <span class="string">' '</span>;</span><br><span class="line">            PrintQueue();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">RoolL</span><span class="params">(<span class="keyword">int</span> curL)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (curL &gt; <span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        ShiftSpace(curL + <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//最左的L特例</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        ShiftSpace(curL + <span class="number">2</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">SwapToRight</span><span class="params">(<span class="keyword">int</span> iSpace)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//最左的L特例</span></span><br><span class="line">    <span class="keyword">if</span> (iSpace == <span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        iSpace++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    PrintRst(iSpace - <span class="number">2</span>);</span><br><span class="line">    czInput\[iSpace\] = czInput\[iSpace - <span class="number">2</span>\];</span><br><span class="line">    czInput\[iSpace - <span class="number">2</span>\] = <span class="string">' '</span>;</span><br><span class="line">    PrintQueue();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    gets(czInput);</span><br><span class="line">    <span class="keyword">int</span> i;</span><br><span class="line">    <span class="keyword">for</span> (i = len - <span class="number">1</span>; i &gt;= <span class="number">0</span>; i--)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (czInput\[i\] != <span class="string">'L'</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> j = i - <span class="number">1</span>; j &gt;= <span class="number">0</span>; j--)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">if</span> (czInput\[j\] == <span class="string">'L'</span>)</span><br><span class="line">                &#123;</span><br><span class="line">                    RoolL(j);</span><br><span class="line">                    SwapToRight(j + <span class="number">1</span>);</span><br><span class="line">                    i = len;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (czInput\[i\] == <span class="string">' '</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            PrintRst(i + <span class="number">1</span>);</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后写个脚本玩游戏就好啦。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python  </span></span><br><span class="line"><span class="comment">#\-\*\- coding:utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="string">"""</span></span><br><span class="line"><span class="string">BCTF_crypto300</span></span><br><span class="line"><span class="string">ROIS_yufan</span></span><br><span class="line"><span class="string">"""</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> base64,binascii,zlib</span><br><span class="line"><span class="keyword">import</span> hashlib</span><br><span class="line"><span class="keyword">import</span> re, socket</span><br><span class="line"></span><br><span class="line">command = <span class="string">'cudaHashcat64 --custom-charset1 ?l?u?d -m 100 -a 3 "+result+" "+base+"?1?1?1?1"'</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(result, base)</span>:</span></span><br><span class="line">    f = os.popen(<span class="string">"oclHashcat-1.01cudaHashcat64.exe --custom-charset1 ?l?u?d -m 100 -a 3 "</span>+result+<span class="string">" "</span>+base+<span class="string">"?1?1?1?1"</span>);</span><br><span class="line">    <span class="keyword">return</span> f.read()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">getrst</span><span class="params">(str, result, base)</span>:</span></span><br><span class="line">    partten = re.compile(result + <span class="string">r':('</span>+base+<span class="string">'....'</span>+<span class="string">')'</span>)</span><br><span class="line">    <span class="keyword">return</span> str\[str.find(result)+<span class="number">41</span>:str.find(result)+<span class="number">61</span>\]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    HOST = <span class="string">'218.2.197.242'</span>    <span class="comment"># The remote host</span></span><br><span class="line">    PORT = <span class="number">6000</span>              <span class="comment"># The same port as used by the server</span></span><br><span class="line">    s = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)</span><br><span class="line">    s.connect((HOST, PORT))</span><br><span class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</span><br><span class="line">    strrecv = s.recv(<span class="number">1024</span>)</span><br><span class="line">    <span class="keyword">print</span> strrecv</span><br><span class="line">\<span class="comment">#    strrecv = 'SHA1("5kEQPr0sul1aWUBb" + X).hexdigest() == "952792a53660aac0cc4d9eb1277f9b00d0ebf48c", X is a string of alphanumeric'</span></span><br><span class="line">    partten = re.compile(<span class="string">r'SHA1("(.*)" '</span>)</span><br><span class="line">    base = partten.findall(strrecv)\[<span class="number">0</span>\]</span><br><span class="line">    partten = re.compile(<span class="string">r'== "(.*)"'</span>)</span><br><span class="line">    result = partten.findall(strrecv)\[<span class="number">0</span>\]</span><br><span class="line">    <span class="keyword">print</span> base</span><br><span class="line">    <span class="keyword">print</span> result</span><br><span class="line">\<span class="comment">#    result = '848656a9e7f76052e8a73d42d17ec02400732e06'</span></span><br><span class="line">\<span class="comment">#    base = 'rVYQ76B4IJdCzy8m'</span></span><br><span class="line">    rst = getrst(run(result, base), result, base)</span><br><span class="line">    <span class="keyword">print</span> rst</span><br><span class="line">    s.sendall(rst\[<span class="number">-4</span>:\]+<span class="string">'n'</span>)</span><br><span class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(<span class="number">1</span>):</span><br><span class="line">        strrecv = s.recv(<span class="number">1024</span>)</span><br><span class="line">        <span class="keyword">print</span> repr(strrecv)</span><br><span class="line">        pattern = re.compile(<span class="string">r'\[LR \]+n'</span>)</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> pattern.search(strrecv):</span><br><span class="line">            strrecv = s.recv(<span class="number">1024</span>)</span><br><span class="line">        strrecv = pattern.findall(strrecv)\[<span class="number">0</span>\]</span><br><span class="line">        <span class="keyword">print</span> strrecv</span><br><span class="line">        f = os.popen(<span class="string">"c4.exe "</span>+strrecv.replace(<span class="string">' '</span>, <span class="string">'*'</span>))</span><br><span class="line">        <span class="keyword">for</span> line <span class="keyword">in</span> f:</span><br><span class="line">            <span class="keyword">print</span> repr(line)</span><br><span class="line">            s.sendall(line)</span><br><span class="line">            strrecv = s.recv(<span class="number">1024</span>)</span><br><span class="line">    <span class="comment">#        pattern = re.compile(r'\[LR \]+n')</span></span><br><span class="line">    <span class="comment">#        strrecv = pattern.findall(strrecv)\[0\]</span></span><br><span class="line">            <span class="keyword">print</span> strrecv</span><br><span class="line"></span><br><span class="line">    <span class="keyword">print</span> s.recv(<span class="number">1024</span>)</span><br><span class="line">\<span class="comment">#    while len(strrecv):</span></span><br><span class="line">\<span class="comment">#        input = raw_input()</span></span><br><span class="line">\<span class="comment">#        s.sendall(input+'n')</span></span><br><span class="line">\<span class="comment">#        strrecv = s.recv(1024)</span></span><br><span class="line">\<span class="comment">#        pattern = re.compile(r'\[LR \]+n')</span></span><br><span class="line">\<span class="comment">#        strrecv = pattern.findall(strrecv)\[0\]</span></span><br><span class="line">\<span class="comment">#        print strrecv</span></span><br><span class="line">    <span class="keyword">return</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> \_\_name\_\_ == <span class="string">'\_\_main\_\_'</span>:</span><br><span class="line"></span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<p><img src="http://img.blog.csdn.net/20140312162923125?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt></p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/bctf/">bctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/lianliankan-cheater/"
+                    data-tooltip="连连看外挂——人生真是寂寞如雪啊"
+                    aria-label="PREVIOUS: 连连看外挂——人生真是寂寞如雪啊"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto300-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto300比特币钱包writeup"
+                    aria-label="NEXT: BCTF2014线上赛crypto300比特币钱包writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/lianliankan-cheater/"
+                    data-tooltip="连连看外挂——人生真是寂寞如雪啊"
+                    aria-label="PREVIOUS: 连连看外挂——人生真是寂寞如雪啊"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto300-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto300比特币钱包writeup"
+                    aria-label="NEXT: BCTF2014线上赛crypto300比特币钱包writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto400-writeup/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

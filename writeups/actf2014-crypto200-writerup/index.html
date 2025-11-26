@@ -1,0 +1,664 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>ACTF2014之crypto200买不到票的怨念writerup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"题目 买不到TI4的门票觉得人生好灰暗。。ACTF2014crypto200.tar ————割———— 解压以后是一个加密脚本，注意key是未知的，所以先研究算法想办法推出加密的key。 已知明文msg01和密文msg01.enc。 研究算法发现对明文加密时只用到上一位的密文以及key[i%len(key)]即key中的一个字符，并且是按位加密。 于是可以从msg01第一位开始遍历0-9a-zA-Z，与msg01.enc匹配就可以得到key的第一位，然后以此类推就能推出全部的key 代码如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051g2 = open('msg01.enc.ord', 'rb')key = ''c = ''str = ''t = chr(0)i = 0find = 0ckey = g2.read(1)realkey=''for p in f:    for k1 in range(0, 256):        k1 = chr(k1)        find=0        c = chr(( ord(p) + (ord(k1) ^ ord(t)) + i**i ) &amp; 0xff)        if c == ckey:            print 'get %d is %c' % (i, k1)            realkey += k1            find = 1            break    if find ==0:        print 'cant find NO.', i        break    t = p    i += 1    ckey = g2.read(1)print repr(realkey)g.close()运行得到key ![](data:image/png;base64,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) 因为key是循环取的，所以key='DoNotTryToGuessWhatDoesD3AdCa7ThinkOf' 之后写一个解密脚本解密msg02.enc即可g = open('msg02.enc', 'rb').read()f = open('msgtest02', 'wb')key = 'DoNotTryToGuessWhatDoesD3AdCa7ThinkOf'i = 0t = chr(0)p = ''str = ''for c in g:    p =chr( (ord(c) - i**i - (ord(key\\[i % len(key)\\]) ^ ord(t)) ) &amp; 0xff )    t = p    i += 1    str += p    f.write(p)print strf.close()\n\n","dateCreated":"2014-04-07T10:40:50+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-04-07T10:40:50+08:00","description":"","headline":"ACTF2014之crypto200买不到票的怨念writerup","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/writeups/actf2014-crypto200-writerup/","keywords":"writeup, actf"}</script>
+    <meta name="description" content="题目 买不到TI4的门票觉得人生好灰暗。。ACTF2014crypto200.tar ————割———— 解压以后是一个加密脚本，注意key是未知的，所以先研究算法想办法推出加密的key。 已知明文msg01和密文msg01.enc。 研究算法发现对明文加密时只用到上一位的密文以及key[i%len(key)]即key中的一个字符，并且是按位加密。 于是可以从msg01第一位开始遍历0-9a-zA">
+<meta name="keywords" content="writeup,actf">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="ACTF2014之crypto200买不到票的怨念writerup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/actf2014-crypto200-writerup/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="题目 买不到TI4的门票觉得人生好灰暗。。ACTF2014crypto200.tar ————割———— 解压以后是一个加密脚本，注意key是未知的，所以先研究算法想办法推出加密的key。 已知明文msg01和密文msg01.enc。 研究算法发现对明文加密时只用到上一位的密文以及key[i%len(key)]即key中的一个字符，并且是按位加密。 于是可以从msg01第一位开始遍历0-9a-zA">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="data:image/png;base64,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">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.757Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ACTF2014之crypto200买不到票的怨念writerup">
+<meta name="twitter:description" content="题目 买不到TI4的门票觉得人生好灰暗。。ACTF2014crypto200.tar ————割———— 解压以后是一个加密脚本，注意key是未知的，所以先研究算法想办法推出加密的key。 已知明文msg01和密文msg01.enc。 研究算法发现对明文加密时只用到上一位的密文以及key[i%len(key)]即key中的一个字符，并且是按位加密。 于是可以从msg01第一位开始遍历0-9a-zA">
+<meta name="twitter:image" content="data:image/png;base64,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">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            ACTF2014之crypto200买不到票的怨念writerup
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-04-07T10:40:50+08:00">
+	
+		    Apr 07, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>题目 买不到TI4的门票觉得人生好灰暗。。<a href="http://yfcnblog.sinaapp.com/?attachment_id=76" target="_blank" rel="noopener">ACTF2014crypto200.tar</a> ————割———— 解压以后是一个加密脚本，注意key是未知的，所以先研究算法想办法推出加密的key。 已知明文msg01和密文msg01.enc。 研究算法发现对明文加密时只用到上一位的密文以及key[i%len(key)]即key中的一个字符，并且是按位加密。 于是可以从msg01第一位开始遍历0-9a-zA-Z，与msg01.enc匹配就可以得到key的第一位，然后以此类推就能推出全部的key 代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">g2 = open(<span class="string">'msg01.enc.ord'</span>, <span class="string">'rb'</span>)</span><br><span class="line"></span><br><span class="line">key = <span class="string">''</span></span><br><span class="line">c = <span class="string">''</span></span><br><span class="line">str = <span class="string">''</span></span><br><span class="line">t = chr(<span class="number">0</span>)</span><br><span class="line">i = <span class="number">0</span></span><br><span class="line">find = <span class="number">0</span></span><br><span class="line">ckey = g2.read(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">realkey=<span class="string">''</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> p <span class="keyword">in</span> f:</span><br><span class="line">    <span class="keyword">for</span> k1 <span class="keyword">in</span> range(<span class="number">0</span>, <span class="number">256</span>):</span><br><span class="line">        k1 = chr(k1)</span><br><span class="line">        find=<span class="number">0</span></span><br><span class="line">        c = chr(( ord(p) + (ord(k1) ^ ord(t)) + i**i ) &amp; <span class="number">0xff</span>)</span><br><span class="line">        <span class="keyword">if</span> c == ckey:</span><br><span class="line">            <span class="keyword">print</span> <span class="string">'get %d is %c'</span> % (i, k1)</span><br><span class="line">            realkey += k1</span><br><span class="line">            find = <span class="number">1</span></span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">    <span class="keyword">if</span> find ==<span class="number">0</span>:</span><br><span class="line">        <span class="keyword">print</span> <span class="string">'cant find NO.'</span>, i</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    t = p</span><br><span class="line">    i += <span class="number">1</span></span><br><span class="line">    ckey = g2.read(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> repr(realkey)</span><br><span class="line">g.close()</span><br><span class="line"></span><br><span class="line">运行得到key ![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbEAAADlCAIAAABS2l6zAAAQ+<span class="number">0l</span>EQVR4nO3dPbKjuhqFYcbFgJgGVTe5qRNGQU7cTILEQ3ByZ6Ab8PNJQgJJBnUbvU/tOtWHbWOM7bXF33L1v9V//vvihx9++Cn8p9Iz8c93FAD8ODIRAASZCADi6Zn4Huuqraru9f7bSwLgF5xkYrXaT78sE9+vuqoPMus9dlXbLj/dqN3w8+rW6f3ku3N8Jk7N9nDrTz1+wu8P4HcdZaIefNa/M2bi59X1g/x7i7/Pq9uiSp9+ualpuxeRCJQhdNvZCsHDTHy/<span class="number">6</span>kojeTc028RmcN74aLyo1DxmnIeKn7Fut6xUauor/X+<span class="number">1</span>O5jjxKmp2kp+zsePQ39f2gL451yfiUNjJd6Sc/p0Y2h4tu2sk4SyQvAz1s7RnJ6Jy7/bxpGdHr7ZAnio80yM259oBdz2v3bwDY07II+<span class="number">8</span>x07LwanRd/NNfXWaiUO/DA/rMXDvIoNEoDRXjxPfr7rSxmFGJlrWHAzMxH3qfcZajr109fm28+dV6xvObVW57mI84uENADzOHZnoGyd6tlkDMtEcIXpu4BzQeY47D80Si7V3w1g/hgOgFCnHnY8ycb+r0LU/Uan3q97+x/zNztBbp+Ds+Dac1cG5OMvBFu/jMkgEipRyfqLvpMV1nnJ4uW6a2n3cubK3sL3HnfdnC67xN/XrFH94Ofcnrj/+IDZ3VgIoxs3XsRxsMgPAv+f6TIzYKgaAf8wtmRh+DjYA/FOe3gEBADHIRAAQZCIACDIRAMTTM5FOWQAx7jhnO9IlnbK+C12iM9E4r9x1eTaAJ4u+tu/ggr/ERTjLxKF3dsrqpTX3dMrGlJgBeIboDoiATMzSKaumpm2bLQbv6JQlE4HyJPbiHGTinZ2y2njQanu9o1OWTATKk9gp60xJpe7rlF13HW77DRMyMbZTlkwEyvM7nbLzbY3vY4nMxNhOWTIRKE9KJjoDMWCcmN4pK2S/Ydr+xEVApyyZCJTo8uPOl3fKTo12no3eLxt03Dm5U9Z+KgCKEH1+orUBvMtEdXWnrBr69przEyM6ZbfFIhOBstApCwCCTlkAEHTKAoB4egcEAMQgEwFAkIkAIMhEABBPz8SETllOSwQK9tOdskop/<span class="number">5</span>XO653JRADhfrhTVn3GeslKfybesDwAHuz6/sRcnbKruHFiQKfsnIkvx7ICeLyf7ZSVacGZGNgpO6c01+IARUrslPXuT8zWKSu/Cc7EwE5Z31MAUICrx4nZOmU3EdvOYZ2yZCJQsDsyMU+n7CrpuPNRpyyZCBTshztlF4nn4vg7ZclEoGB3nJ+Yq1NWzsWZf86+eyCwU5ZMBApGpywACDplAUDQKQsA4ukdEAAQg0wEAEEmAoAgEwFAPD0T6U8EECPlnO3tV9dkYmqn7EnX7Hqj6EwEULDoa/vyZ6KnU/bz6jxdswCQKrED4vDavrydsofT0ztlGVcCRUrJxPnfvkzM3Sk7P2jvGScmdsqSiUChUjpljzIxf6fssmPRVQChruiUBVCS6HGiszTMzMS8nbJTf/QdVd93ygIoSUom6mLGidd3yh6NENdbfNspC6Aklx93ztcp6+iX3fu+UxZASRLPT/SOE5XK1Sk7NUahrOdbnr/vlAVQEjplAUDQKQsAgk5ZABBP74AAgBhkIgAIMhEABJkIAOLpmUh/IoAY0edsn1zbl4BOWQD/jOhr+/bXtNydiZ5OWe90AEiW3ovjz8RHdMq+HMsK4PG+<span class="number">6</span>sVxZuLf6JT1jxMTO2W1p8C1OEBJojtlff/+<span class="number">83</span>c6ZY+<span class="number">6</span>ZpW6olOWSgigJInfx3KYiXk7ZQ+nX9ApSyYCJflqf2LkOPH6Ttnz6d93ypKJQEm+Ou7sOhcnW6est2vW8H2nLJkIlCSlU/b4GEuuTlnvdMP3nbJkIlASOmUBQNApCwCCTlkAEE/vgACAGGQiAAgyEQAEmQgA4umZmNCfyAmJQMFSztn+syuG+CoTUztlN0Pfui/sU2QigDjR1/b98XcpJi5Caqfscu8lMT2ZeMPyAHiw3+<span class="number">6</span>UXf73M9ah48TgTlnp7CEggYIkZuLBtnO+TtmpX/IxMBMjOmWl34zLcICipHTKHm07Z+uU1cvBAjMxrlOW6xKBEt3Rn5ijU9Y48LL+<span class="number">1</span>OO+DDGtU5YLE4FCPaJTNmJ/<span class="number">4</span>uKsU7ZqBnYlAiX63U5ZTXwmhnXKDk3F9jNQlh/ulBWx+xMjOmWHho1ooCR0ygKAoFMWAASdsgAgnt4BAQAxyEQAEGQiAAgyEQDE0zMxoT8RQMGiz9m2Llq+IBOTO2Wn3rze2XnxcmomcvgcKNLl1/bFS+<span class="number">6</span>U3brCLmdd1Mc1fkAxojsgDqas88zVKRuSiQmdsmpodgtClSJQiOsz8S90yh74plP2dCKAx4nulD3JxGydssran9jtS7+USuqUdV+QyGWKQBESx4nOlFQqX6esY/r5MZbwTlnGiUCh7sjE7J2yaq4Lcw0VEzpl2Z8IFCzlu0yPMjFfp+zn1Uk4urtmVVKnrOK4M1Cu9O+<span class="number">892</span>SiytYpe941q5I6Ze1l4vxEoCB0ygKAoFMWAASdsgAgnt4BAQAxyEQAEGQiAAgyEQDE0zMxuT9xO5eS4+ZASVLO2fadyJ24CMmdskopNTXrr+rRVQKRmImcRAQU6pc7ZT9j3bbN5LvfFzjVHChVdAdEQCZm6pQdes/Y0LxDWqcsJ1gCZbo+E3N1yk5N29VdTH9iYKds3CIBeJSUTtmj/YnZOmXNDef32LljMaFTNnSRADzQ1ePEbJ2ydmHi1Dj3LSZ0ykYuEoAnuSMT83TKWiEYkonisFOWTATKdflx52ydssa/w757wJztwb5FMhEo1R3nJ2bqlDV/<span class="number">5</span>dsKTuqUJROBUtEpCwCCTlkAEHTKAoB4egcEAMQgEwFAkIkAIMhEABBPz8TkTlkARfrdTllpk60OamUTMtG+NJuTiYCC/HKnrGFqfHVh3y2PfnkigMf74U5Z3dB7sjKhU3aX0VzpB5Tjdztl9clWb5gmoVN2vzyEIlCM6E5ZPRwdmZitU1bjHSSqpE5ZMhEoWPQ4UU9DTyZm6ZTdSKOi+w7RnbJkIlCwlEz0TVQqZ6fs7PPqDr+pKqFTlv2JQMHSjzt7zsXJ1ymr1NkgUSV1ynLcGShY+vmJ+xuv88zWKTs1vq+<span class="number">6l</span>1nHd8pyfiJQMDplAUDQKQsAgk5ZABBP74AAgBhkIgAIMhEABJkIAOLpmUinLIAYQZnoPGfbcx1LvMROWWXWynquZiETAcSIzsTTrrBoiZ2yxpXOvl5FAIiS3hXmz8Q8nbJT07bN1hDmu/A5oVPWWipOsQRKcn69c+w4MVunrD42HHrPhc8JnbJzIK434lIcoChXZ2LOTtnPWEftT0zrlKUpDChJUFdYZCbm6ZQ1vpTqPXYB287hnbL6yHBoyESgGCeZqPt6nHhpp6z1HSy+r2T5vlOWcSJQksuPO2frlJ2a1ty3GHSMRZutd98i+xOBcoUed7ai8PD8xKydsin7E487Zc0lYowIFIVOWQAQdMoCgKBTFgDE0zsgACAGmQgAgkwEAEEmAoB4eibSnwggRkqnrHNKeiamd8quxRDaBS37O0dn4nLgnMv7gBKl92xny8SATlmjQ+xb71dd1XXtbjwD8GzRnbIB48QsnbKfsdav57uwU3ZJQK0Oh0wEihHdn3iaiZk6Za0QDOnFCeyUXZdHlotMBIpxdSbm65Sdmlbr1p766jQToztl1xgnE4FiRHfKBmRink5Zs2e76+orO2XX5Zk3oMlEoBjRnbJfjBMv7ZS15jF27mMs33bKvl+<span class="number">13</span>XgG4MEuPxcnW6esfhPPhrNK6pS1Mno5MEQmAkX45U7ZqT8plFVJnbK7cevQkIlAKeiUBQBBpywACDplAUA8vQMCAGKQiQAgyEQAEGQiAIinZyKdsgBipPcn+s/ZjhR8bd/QW6dna52y+<span class="number">4</span>tblpmTiQAiRGei7993Z+Lati2ZOPRGv+xlnbIAChbdKRuQidd3yi51OEaP7NS0bbPF4IWdstZScYolUJLE/sSDTLy+U3bqHd3aVonshZ2ycyCuN+JSHKAo6Zno3p94eaesPgD8MhOjO2UDFg/As/zrnbLGl/atP/X4ScnEiE5ZfWSofTELgKdL6ZT1bUordXOn7AX7ExfBnbKME4GyXH7c+fJOWY35XX1Bx50TOmXZnwgULLpT1jd4/HNbp6ywvr809vzEwE5Zc4kYIwJFoVMWAASdsgAg6JQFAPH0DggAiEEmAoAgEwFAkIkAIMhEABD/QKcsAPwzbuqUnfqqbetRJthdDicFsFPTttVS6iBXq+gzDKNd6dKeXfJy/XzGWlorpiblcSNNvb5sQ788ejPNy++<span class="number">6</span>IDxS5Ot47fxd74TtKR+<span class="number">8</span>Pex34/zuWtpEXt3xapEXsXK9J833w+l6nhpnVYnvcd3vGX35vb+aFyPT5273ef9l0Z2yB+NHfb5jvVtHQy+dDdq1yj5T03X1epv32AWs8bG25/l5dfMLPDXLO3WsEzMxdj76u//z6tKyONrQWx+<span class="number">5</span>bTlPP/x7+/U5P0TU6xjNM/+pkXfU9nIs3mN38ldn6tf76t0hIX8q9JWwPe7B+yFhPfsf2vGM7OW3Rh77j8n9nzvl/Lz/rOs7ZWdjrbfWKKXM18Z8W2t/iuUFm5pufK13MV8bx+<span class="number">13</span>nWLW+<span class="number">3J</span>771oz6V6f9e9hP8l85P3d7oYY+<span class="number">3e8</span>e3lcbxH9Q6j/TbafgnlfbbzZudfDNv09ds00/<span class="number">2</span>qe8/aR/ry6/rU9hPbB2IaTvoXZf+dDzOsY/bz88/dNXGLI+nugPW4/rJm4rh8H53ow7f9I7N8PvvW8DbusJW+rtm96x3pbM1Ebk/bT7n21LYA+QjRW9a2fO/<span class="number">1</span>XvhX7axIz8XR/omMbwXxttv81ig+HvpW/<span class="number">5934</span>Xv6rvza+<span class="number">2</span>yvfuGZdHsdf7/ljMM9h6JcbmB8ta57ObHUsz268tjHGEdrN9EGB/vdffxP7xkoyfVlRU193/fIPub2e9doyT9sTtDo2zseJ6vx1jH1evvnPN+zd2TovpzxZrZxdGVt2/tflYD0sXHnqzET3et49a+<span class="number">328</span>nfLfO9tmei+gf2MTseJ6pbPnYrZJ/DvS+yUPR0nOjhfm937bNsCMl6V7bXx314lZaLzhZT57G5gz8e3PHJHbYdXMylfJjq6c7fnos3B+PvsnD719TjPdqy78W1kojOLrYdOzETfekh4XkeZuM3c/HyuN5BXZz9mPM1E/<span class="number">3</span>qYOTeK3eNE53pef7uf4rv9Mi7T0ueyTLz0c/cwKZ2yl2Ti8uqevjbbxkjGTNymn28rHWSBZzk9nwF9jOO3+/u8nz7Wfd+<span class="number">0</span>/aA+r65r+m0xvI9bGeO42Ew8ex3jn1fAtrO9f1DP3Pm+vkz07iA7Wg8z59q4OxP7prd3RHi2nb3P7v7P3cNk/C5TeyNoeaXNHcn6e9217eO/vfGr3b7kuEycPwCu37q2nd3LY+<span class="number">0</span>g199q+thQ3370DFq1+Wjr8GD6so/cnL93fLqtwPfY2eNE1/qMfh3jnpd//s6OdTtzZTva2EfWtu7lWfvZD9fDMtG1v+zmTNzOHzCfS/Ixlns+dw8T3SnrnHKeiQf77F3bLNsf/+Utoo8jDrZxBse+avO0CeeGm2tbaZeqnvn4l8d6ytv7UqZ346vXd7qbp31IFjgf1zdd/<span class="number">8</span>xs+<span class="number">4</span>C2hZ+PRejrVi/m7RvzOOx+fUa+jtHP6+hY2e60G31NvvUbmKciVW3b9ObH2zH/o/XgGjk63w/+<span class="number">9</span>Wy/<span class="number">3</span>+a7HLwu27k49mfBcy6Odc6QHCTJ8Ll7Fq5j8TjY8QTguchEm33WK4CSkIkAIMhEABBkIgAIMhEABJkIAIJMBACR0inrm/i3nwsAfItMBACR2CnLdw8AeKT/A6P2yOvdijX6AAAAAElFTkSuQmCC) 因为key是循环取的，所以key=<span class="string">'DoNotTryToGuessWhatDoesD3AdCa7ThinkOf'</span> 之后写一个解密脚本解密msg02.enc即可</span><br><span class="line"></span><br><span class="line">g = open(<span class="string">'msg02.enc'</span>, <span class="string">'rb'</span>).read()</span><br><span class="line">f = open(<span class="string">'msgtest02'</span>, <span class="string">'wb'</span>)</span><br><span class="line">key = <span class="string">'DoNotTryToGuessWhatDoesD3AdCa7ThinkOf'</span></span><br><span class="line">i = <span class="number">0</span></span><br><span class="line">t = chr(<span class="number">0</span>)</span><br><span class="line">p = <span class="string">''</span></span><br><span class="line">str = <span class="string">''</span></span><br><span class="line"><span class="keyword">for</span> c <span class="keyword">in</span> g:</span><br><span class="line">    p =chr( (ord(c) - i**i - (ord(key\[i % len(key)\]) ^ ord(t)) ) &amp; <span class="number">0xff</span> )</span><br><span class="line">    t = p</span><br><span class="line">    i += <span class="number">1</span></span><br><span class="line">    str += p</span><br><span class="line">    f.write(p)</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> str</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
+<p><img src="data:image/png;base64,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" alt></p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/actf/">actf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/dll-injection/"
+                    data-tooltip="远程线程注入之DLL注入"
+                    aria-label="PREVIOUS: 远程线程注入之DLL注入"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/actf2014-crypto100-writerup/"
+                    data-tooltip="ACTF2014之crypto100古老writerup"
+                    aria-label="NEXT: ACTF2014之crypto100古老writerup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/dll-injection/"
+                    data-tooltip="远程线程注入之DLL注入"
+                    aria-label="PREVIOUS: 远程线程注入之DLL注入"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/actf2014-crypto100-writerup/"
+                    data-tooltip="ACTF2014之crypto100古老writerup"
+                    aria-label="NEXT: ACTF2014之crypto100古老writerup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto200-writerup/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

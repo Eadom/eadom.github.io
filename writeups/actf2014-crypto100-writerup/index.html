@@ -1,0 +1,660 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>ACTF2014之crypto100古老writerup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"ACTF清明放假回家。。所以就不做了，抽空做了两个简单的密码的。 题目 本题flag不在ACTF{}中。 oivqmqgn, yja vibem naarn yi yxbo sqnyab yjqo q zixuea is gaqbn qdi. ykra jqn zira yi baseazy yjqy qeni ko yja ujbqzw rqdqhkoa. yjkn kn vjqy yja uquab saam kn qpixy: gix nxprky q uquab, va backav ky qom ky dayn uxpeknjam. oi oaam yi vqky q rioyj ib yvi xoyke gix naa gixb qbykzea ko yja oafy ujbqzw knnxa, vjao yja ykra jqn zira, va’ee mazkma yi zirukea q oav knnxa sbir yja qbykzean yjqy jqca paao nxprkyyam. yjqy’n pqnkzqeeg ky. qom dbqp gix seqd jaba, zbguyiiiniziieqrkbkdjy? ————割———— 很像单表代换的，参考辅助处理单表替换密码 yja很明显应该是the，剩下的慢慢试试。 下面的就转出部分没有转全 nowadays, the world seems to turn faster than a couple of years ago. time has come to reflect that also in the phracw magahine. this is what the paper feed is about: you submit a paper, we review it and it gets published. no need to wait a month or two until you see your article in the neft phracw issue, when the time has come, we’ll decide to compile a new issue from the articles that have been submitted. that’s basically it. and grab you flag here, cryptooosocoolamiright? key在最后一句cryptooosocoolamiright\n","dateCreated":"2014-04-07T10:28:47+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-04-07T10:28:47+08:00","description":"","headline":"ACTF2014之crypto100古老writerup","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/writeups/actf2014-crypto100-writerup/","keywords":"writeup, actf"}</script>
+    <meta name="description" content="ACTF清明放假回家。。所以就不做了，抽空做了两个简单的密码的。 题目 本题flag不在ACTF{}中。 oivqmqgn, yja vibem naarn yi yxbo sqnyab yjqo q zixuea is gaqbn qdi. ykra jqn zira yi baseazy yjqy qeni ko yja ujbqzw rqdqhkoa. yjkn kn vjqy yja uq">
+<meta name="keywords" content="writeup,actf">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="ACTF2014之crypto100古老writerup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/actf2014-crypto100-writerup/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="ACTF清明放假回家。。所以就不做了，抽空做了两个简单的密码的。 题目 本题flag不在ACTF{}中。 oivqmqgn, yja vibem naarn yi yxbo sqnyab yjqo q zixuea is gaqbn qdi. ykra jqn zira yi baseazy yjqy qeni ko yja ujbqzw rqdqhkoa. yjkn kn vjqy yja uq">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.754Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ACTF2014之crypto100古老writerup">
+<meta name="twitter:description" content="ACTF清明放假回家。。所以就不做了，抽空做了两个简单的密码的。 题目 本题flag不在ACTF{}中。 oivqmqgn, yja vibem naarn yi yxbo sqnyab yjqo q zixuea is gaqbn qdi. ykra jqn zira yi baseazy yjqy qeni ko yja ujbqzw rqdqhkoa. yjkn kn vjqy yja uq">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            ACTF2014之crypto100古老writerup
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-04-07T10:28:47+08:00">
+	
+		    Apr 07, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>ACTF清明放假回家。。所以就不做了，抽空做了两个简单的密码的。 题目 本题flag不在ACTF{}中。 oivqmqgn, yja vibem naarn yi yxbo sqnyab yjqo q zixuea is gaqbn qdi. ykra jqn zira yi baseazy yjqy qeni ko yja ujbqzw rqdqhkoa. yjkn kn vjqy yja uquab saam kn qpixy: gix nxprky q uquab, va backav ky qom ky dayn uxpeknjam. oi oaam yi vqky q rioyj ib yvi xoyke gix naa gixb qbykzea ko yja oafy ujbqzw knnxa, vjao yja ykra jqn zira, va’ee mazkma yi zirukea q oav knnxa sbir yja qbykzean yjqy jqca paao nxprkyyam. yjqy’n pqnkzqeeg ky. qom dbqp gix seqd jaba, zbguyiiiniziieqrkbkdjy? ————割———— 很像单表代换的，参考<a href="http://yfcnblog.sinaapp.com/?p=67" title="辅助处理单表替换密码" target="_blank" rel="noopener">辅助处理单表替换密码</a> yja很明显应该是the，剩下的慢慢试试。 下面的就转出部分没有转全 nowadays, the world seems to turn faster than a couple of years ago. time has come to reflect that also in the phracw magahine. this is what the paper feed is about: you submit a paper, we review it and it gets published. no need to wait a month or two until you see your article in the neft phracw issue, when the time has come, we’ll decide to compile a new issue from the articles that have been submitted. that’s basically it. and grab you flag here, cryptooosocoolamiright? key在最后一句cryptooosocoolamiright</p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/actf/">actf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/actf2014-crypto200-writerup/"
+                    data-tooltip="ACTF2014之crypto200买不到票的怨念writerup"
+                    aria-label="PREVIOUS: ACTF2014之crypto200买不到票的怨念writerup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/process-monoalphabetic-substitution-cipher/"
+                    data-tooltip="辅助处理单表替换密码"
+                    aria-label="NEXT: 辅助处理单表替换密码"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/actf2014-crypto200-writerup/"
+                    data-tooltip="ACTF2014之crypto200买不到票的怨念writerup"
+                    aria-label="PREVIOUS: ACTF2014之crypto200买不到票的怨念writerup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/process-monoalphabetic-substitution-cipher/"
+                    data-tooltip="辅助处理单表替换密码"
+                    aria-label="NEXT: 辅助处理单表替换密码"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/actf2014-crypto100-writerup/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

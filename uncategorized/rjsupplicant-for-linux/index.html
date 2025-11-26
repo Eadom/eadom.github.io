@@ -1,0 +1,662 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>rjsupplicant for linux 锐捷代理破除多网卡限制 - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"福大锐捷更新了新版的。。。也有个linux版rjsupplicant rjsupplicant这个程序分x86和x64两个版本，启动时通过sh判断版本运行。 通过IDA加载x86的试试看，发现有带调试信息。。。一切就简单了。 先试试把多网卡处理掉，有调试信息的话先试试直接找函数看看。 尝试搜索字符串，多网卡就搜索multi试试，发现一个CAdapterDetectThread::MultipleAdaptesOrIPCheck函数 看下F5的\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123int __cdecl CAdapterDetectThread::MultipleAdaptesOrIPCheck(int a1)&#123;  int v1; // eax@1  int v2; // ebx@2  int v3; // esi@6  signed int v4; // ecx@6  char v5; // zf@6  int v6; // edi@6  int i; // esi@10  int *v8; // eax@14  int v9; // eax@15  int v11; // \\[sp+8h\\] \\[bp-60h\\]@16  int v12; // \\[sp+Ch\\] \\[bp-5Ch\\]@16  const char *s1; // \\[sp+24h\\] \\[bp-44h\\]@2  void *ptr; // \\[sp+28h\\] \\[bp-40h\\]@1  char dest; // \\[sp+30h\\] \\[bp-38h\\]@19  int *v16; // \\[sp+40h\\] \\[bp-28h\\]@19  int v17; // \\[sp+50h\\] \\[bp-18h\\]@19  int v18; // \\[sp+54h\\] \\[bp-14h\\]@19  int v19; // \\[sp+58h\\] \\[bp-10h\\]@15  v1 = get\\_nics\\_info(0);  ptr = (void *)v1;  if ( !v1 )    return free\\_nics\\_info(ptr);  v2 = v1;  s1 = (const char *)(a1 + 360);  while ( !strcmp(s1, (const char *)v2) )  &#123;    v3 = v2 + 16;    CLogFile::AppendText(g\\_log\\_Wireless, \"nic name:%s\", s1);    v4 = 6;    v5 = a1 == -884;    v6 = a1 + 884;    do    &#123;      if ( !v4 )        break;      v5 = *(\\_BYTE *)v3++ == *(\\_BYTE *)v6++;      --v4;    &#125;    while ( v5 );    if ( !v5 )    &#123;      CLogFile::AppendText(g\\_log\\_Wireless, \"mac chagedn\");      v12 = 0;      v11 = 30;      goto FindMul;    &#125;    CLogFile::AppendText(g\\_log\\_Wireless, \"ipv4 count:%d\", *(_DWORD *)(v2 + 48));    for ( i = *(\\_DWORD *)(v2 + 52); i; i = *(\\_DWORD *)(i + 8) )      CLogFile::AppendText(        g\\_log\\_Wireless,        (const char *)&amp;unk_810ED8E,        *(_BYTE *)(i + 3),        *(_BYTE *)(i + 2),        *(_BYTE *)(i + 1),        *(_BYTE *)i);    if ( *(\\_DWORD *)(v2 + 48) &gt; 1 &amp;&amp; *(\\_BYTE *)(a1 + 890) )    &#123;      CLogFile::AppendText(g\\_log\\_Wireless, \"multiple ipsn\");      v12 = 0;      v11 = 21;      goto FindMul;    &#125;    v8 = *(int **)(v2 + 52);    if ( !v8 )    &#123;      CLogFile::AppendText(g\\_log\\_Wireless, \"ip chaged - no ipn\");      v12 = 0;      v11 = 31;      goto FindMul;    &#125;    v9 = *v8;    v19 = v9;    LOWORD(v9) = \\_\\_ROR\\_\\_(v9, 8);    v9 = \\_\\_ROR\\_\\_(v9, 16);    LOWORD(v9) = \\_\\_ROR\\_\\_(v9, 8);    v5 = *(_DWORD *)(a1 + 880) == v9;    v19 = v9;    if ( !v5 )    &#123;      CLogFile::AppendText(g\\_log\\_Wireless, \"ip chagedn\");      v12 = 0;      v11 = 31;      goto FindMul;    &#125;LABEL_4:    v2 = *(_DWORD *)(v2 + 64);    if ( !v2 )      return free\\_nics\\_info(ptr);  &#125;  if ( !*(_BYTE *)(a1 + 890) )    goto LABEL_4;  CLogFile::AppendText(g\\_log\\_Wireless, (const char *)&amp;unk_810EDC9, v2);  memset(&amp;dest, 0, 0x20u);  strncpy(&amp;dest, (const char *)v2, 0xFu);  v16 = &amp;v17;  v17 = 10;  v18 = 0;  if ( ioctl(*(_DWORD *)(a1 + 900), 0x8913u, &amp;dest) &lt; 0 )  &#123;    if ( ioctl(*(_DWORD *)(a1 + 900), 0x8946u, &amp;dest) &gt;= 0 &amp;&amp; v18 == 1 )    &#123;      CLogFile::AppendText(g\\_log\\_Wireless, \"multiple adaptersn\");      v12 = 0;      v11 = 20;      goto FindMul;    &#125;    goto LABEL_4;  &#125;  if ( !((unsigned \\_\\_int8)v16 &amp; 1) || !((unsigned \\_\\_int8)v16 &amp; 0x40) )  &#123;    CLogFile::AppendText(g\\_log\\_Wireless, \"SIOCGIFFLAGS flags:%4x\", (signed __int16)v16);    goto LABEL_4;  &#125;  CLogFile::AppendText(g\\_log\\_Wireless, \"multiple adapters flags:%4x\", (signed __int16)v16);  v12 = 0;  v11 = 20;FindMul:  PostThreadMessage(*(\\_DWORD *)(a1 + 872), *(\\_DWORD *)(a1 + 876), v11, v12);  return free\\_nics\\_info(ptr);&#125;\n真好。。还有输出调试，可以看出如果发现多网卡多IP等情况会跳转到FindMul这个label然后PostMessage，应该是判断出多网卡之后向线程发送一个通知信息。把这个函数nop掉就Patch掉多网卡限制了。 ————割———— 之后是Network-manager服务 查找跟service有关的，找到一个stop_service函数\n123456789int \\_\\_cdecl service\\_stop(int a1)&#123;  char s; // \\[sp+10h\\] \\[bp-208h\\]@1  memset(&amp;s, 0, 0x200u);  sprintf(&amp;s, \"service %s stop 2&gt;&amp;-\", a1);  system(&amp;s);  return service_stop2(a1);&#125;\n这个函数作用是通过传入的服务名调用system关闭服务。 查看xrefs引用 \n \n都是在EnvironmentCheck中引用。 查看下这个函数发现第一处的引用是关闭Network-Manager的。nop掉他，结束。 x64的也是类似的，就不重复了\n","dateCreated":"2014-04-03T11:48:39+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-04-03T11:48:39+08:00","description":"","headline":"rjsupplicant for linux 锐捷代理破除多网卡限制","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/","keywords":"rjsupplicant"}</script>
+    <meta name="description" content="福大锐捷更新了新版的。。。也有个linux版rjsupplicant rjsupplicant这个程序分x86和x64两个版本，启动时通过sh判断版本运行。 通过IDA加载x86的试试看，发现有带调试信息。。。一切就简单了。 先试试把多网卡处理掉，有调试信息的话先试试直接找函数看看。 尝试搜索字符串，多网卡就搜索multi试试，发现一个CAdapterDetectThread::MultipleA">
+<meta name="keywords" content="rjsupplicant">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="rjsupplicant for linux 锐捷代理破除多网卡限制">
+<meta property="og:url" content="https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="福大锐捷更新了新版的。。。也有个linux版rjsupplicant rjsupplicant这个程序分x86和x64两个版本，启动时通过sh判断版本运行。 通过IDA加载x86的试试看，发现有带调试信息。。。一切就简单了。 先试试把多网卡处理掉，有调试信息的话先试试直接找函数看看。 尝试搜索字符串，多网卡就搜索multi试试，发现一个CAdapterDetectThread::MultipleA">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="data:image/png;base64,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">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.799Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="rjsupplicant for linux 锐捷代理破除多网卡限制">
+<meta name="twitter:description" content="福大锐捷更新了新版的。。。也有个linux版rjsupplicant rjsupplicant这个程序分x86和x64两个版本，启动时通过sh判断版本运行。 通过IDA加载x86的试试看，发现有带调试信息。。。一切就简单了。 先试试把多网卡处理掉，有调试信息的话先试试直接找函数看看。 尝试搜索字符串，多网卡就搜索multi试试，发现一个CAdapterDetectThread::MultipleA">
+<meta name="twitter:image" content="data:image/png;base64,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">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            rjsupplicant for linux 锐捷代理破除多网卡限制
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-04-03T11:48:39+08:00">
+	
+		    Apr 03, 2014
+    	
+    </time>
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>福大锐捷更新了新版的。。。也有个linux版rjsupplicant rjsupplicant这个程序分x86和x64两个版本，启动时通过sh判断版本运行。 通过IDA加载x86的试试看，发现有带调试信息。。。一切就简单了。 先试试把多网卡处理掉，有调试信息的话先试试直接找函数看看。 尝试搜索字符串，多网卡就搜索multi试试，发现一个CAdapterDetectThread::MultipleAdaptesOrIPCheck函数 看下F5的</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __cdecl <span class="title">CAdapterDetectThread::MultipleAdaptesOrIPCheck</span><span class="params">(<span class="keyword">int</span> a1)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> v1; <span class="comment">// eax@1</span></span><br><span class="line">  <span class="keyword">int</span> v2; <span class="comment">// ebx@2</span></span><br><span class="line">  <span class="keyword">int</span> v3; <span class="comment">// esi@6</span></span><br><span class="line">  <span class="keyword">signed</span> <span class="keyword">int</span> v4; <span class="comment">// ecx@6</span></span><br><span class="line">  <span class="keyword">char</span> v5; <span class="comment">// zf@6</span></span><br><span class="line">  <span class="keyword">int</span> v6; <span class="comment">// edi@6</span></span><br><span class="line">  <span class="keyword">int</span> i; <span class="comment">// esi@10</span></span><br><span class="line">  <span class="keyword">int</span> *v8; <span class="comment">// eax@14</span></span><br><span class="line">  <span class="keyword">int</span> v9; <span class="comment">// eax@15</span></span><br><span class="line">  <span class="keyword">int</span> v11; <span class="comment">// \[sp+8h\] \[bp-60h\]@16</span></span><br><span class="line">  <span class="keyword">int</span> v12; <span class="comment">// \[sp+Ch\] \[bp-5Ch\]@16</span></span><br><span class="line">  <span class="keyword">const</span> <span class="keyword">char</span> *s1; <span class="comment">// \[sp+24h\] \[bp-44h\]@2</span></span><br><span class="line">  <span class="keyword">void</span> *ptr; <span class="comment">// \[sp+28h\] \[bp-40h\]@1</span></span><br><span class="line">  <span class="keyword">char</span> dest; <span class="comment">// \[sp+30h\] \[bp-38h\]@19</span></span><br><span class="line">  <span class="keyword">int</span> *v16; <span class="comment">// \[sp+40h\] \[bp-28h\]@19</span></span><br><span class="line">  <span class="keyword">int</span> v17; <span class="comment">// \[sp+50h\] \[bp-18h\]@19</span></span><br><span class="line">  <span class="keyword">int</span> v18; <span class="comment">// \[sp+54h\] \[bp-14h\]@19</span></span><br><span class="line">  <span class="keyword">int</span> v19; <span class="comment">// \[sp+58h\] \[bp-10h\]@15</span></span><br><span class="line"></span><br><span class="line">  v1 = get\_nics\_info(<span class="number">0</span>);</span><br><span class="line">  ptr = (<span class="keyword">void</span> *)v1;</span><br><span class="line">  <span class="keyword">if</span> ( !v1 )</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">free</span>\_nics\_info(ptr);</span><br><span class="line">  v2 = v1;</span><br><span class="line">  s1 = (<span class="keyword">const</span> <span class="keyword">char</span> *)(a1 + <span class="number">360</span>);</span><br><span class="line">  <span class="keyword">while</span> ( !<span class="built_in">strcmp</span>(s1, (<span class="keyword">const</span> <span class="keyword">char</span> *)v2) )</span><br><span class="line">  &#123;</span><br><span class="line">    v3 = v2 + <span class="number">16</span>;</span><br><span class="line">    CLogFile::AppendText(g\_log\_Wireless, <span class="string">"nic name:%s"</span>, s1);</span><br><span class="line">    v4 = <span class="number">6</span>;</span><br><span class="line">    v5 = a1 == <span class="number">-884</span>;</span><br><span class="line">    v6 = a1 + <span class="number">884</span>;</span><br><span class="line">    <span class="keyword">do</span></span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">if</span> ( !v4 )</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      v5 = *(\_BYTE *)v3++ == *(\_BYTE *)v6++;</span><br><span class="line">      --v4;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span> ( v5 );</span><br><span class="line">    <span class="keyword">if</span> ( !v5 )</span><br><span class="line">    &#123;</span><br><span class="line">      CLogFile::AppendText(g\_log\_Wireless, <span class="string">"mac chagedn"</span>);</span><br><span class="line">      v12 = <span class="number">0</span>;</span><br><span class="line">      v11 = <span class="number">30</span>;</span><br><span class="line">      <span class="keyword">goto</span> FindMul;</span><br><span class="line">    &#125;</span><br><span class="line">    CLogFile::AppendText(g\_log\_Wireless, <span class="string">"ipv4 count:%d"</span>, *(_DWORD *)(v2 + <span class="number">48</span>));</span><br><span class="line">    <span class="keyword">for</span> ( i = *(\_DWORD *)(v2 + <span class="number">52</span>); i; i = *(\_DWORD *)(i + <span class="number">8</span>) )</span><br><span class="line">      CLogFile::AppendText(</span><br><span class="line">        g\_log\_Wireless,</span><br><span class="line">        (<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;unk_810ED8E,</span><br><span class="line">        *(_BYTE *)(i + <span class="number">3</span>),</span><br><span class="line">        *(_BYTE *)(i + <span class="number">2</span>),</span><br><span class="line">        *(_BYTE *)(i + <span class="number">1</span>),</span><br><span class="line">        *(_BYTE *)i);</span><br><span class="line">    <span class="keyword">if</span> ( *(\_DWORD *)(v2 + <span class="number">48</span>) &gt; <span class="number">1</span> &amp;&amp; *(\_BYTE *)(a1 + <span class="number">890</span>) )</span><br><span class="line">    &#123;</span><br><span class="line">      CLogFile::AppendText(g\_log\_Wireless, <span class="string">"multiple ipsn"</span>);</span><br><span class="line">      v12 = <span class="number">0</span>;</span><br><span class="line">      v11 = <span class="number">21</span>;</span><br><span class="line">      <span class="keyword">goto</span> FindMul;</span><br><span class="line">    &#125;</span><br><span class="line">    v8 = *(<span class="keyword">int</span> **)(v2 + <span class="number">52</span>);</span><br><span class="line">    <span class="keyword">if</span> ( !v8 )</span><br><span class="line">    &#123;</span><br><span class="line">      CLogFile::AppendText(g\_log\_Wireless, <span class="string">"ip chaged - no ipn"</span>);</span><br><span class="line">      v12 = <span class="number">0</span>;</span><br><span class="line">      v11 = <span class="number">31</span>;</span><br><span class="line">      <span class="keyword">goto</span> FindMul;</span><br><span class="line">    &#125;</span><br><span class="line">    v9 = *v8;</span><br><span class="line">    v19 = v9;</span><br><span class="line">    LOWORD(v9) = \_\_ROR\_\_(v9, <span class="number">8</span>);</span><br><span class="line">    v9 = \_\_ROR\_\_(v9, <span class="number">16</span>);</span><br><span class="line">    LOWORD(v9) = \_\_ROR\_\_(v9, <span class="number">8</span>);</span><br><span class="line">    v5 = *(_DWORD *)(a1 + <span class="number">880</span>) == v9;</span><br><span class="line">    v19 = v9;</span><br><span class="line">    <span class="keyword">if</span> ( !v5 )</span><br><span class="line">    &#123;</span><br><span class="line">      CLogFile::AppendText(g\_log\_Wireless, <span class="string">"ip chagedn"</span>);</span><br><span class="line">      v12 = <span class="number">0</span>;</span><br><span class="line">      v11 = <span class="number">31</span>;</span><br><span class="line">      <span class="keyword">goto</span> FindMul;</span><br><span class="line">    &#125;</span><br><span class="line">LABEL_4:</span><br><span class="line">    v2 = *(_DWORD *)(v2 + <span class="number">64</span>);</span><br><span class="line">    <span class="keyword">if</span> ( !v2 )</span><br><span class="line">      <span class="keyword">return</span> <span class="built_in">free</span>\_nics\_info(ptr);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> ( !*(_BYTE *)(a1 + <span class="number">890</span>) )</span><br><span class="line">    <span class="keyword">goto</span> LABEL_4;</span><br><span class="line">  CLogFile::AppendText(g\_log\_Wireless, (<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;unk_810EDC9, v2);</span><br><span class="line">  <span class="built_in">memset</span>(&amp;dest, <span class="number">0</span>, <span class="number">0x20</span>u);</span><br><span class="line">  <span class="built_in">strncpy</span>(&amp;dest, (<span class="keyword">const</span> <span class="keyword">char</span> *)v2, <span class="number">0xF</span>u);</span><br><span class="line">  v16 = &amp;v17;</span><br><span class="line">  v17 = <span class="number">10</span>;</span><br><span class="line">  v18 = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">if</span> ( ioctl(*(_DWORD *)(a1 + <span class="number">900</span>), <span class="number">0x8913</span>u, &amp;dest) &lt; <span class="number">0</span> )</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="keyword">if</span> ( ioctl(*(_DWORD *)(a1 + <span class="number">900</span>), <span class="number">0x8946</span>u, &amp;dest) &gt;= <span class="number">0</span> &amp;&amp; v18 == <span class="number">1</span> )</span><br><span class="line">    &#123;</span><br><span class="line">      CLogFile::AppendText(g\_log\_Wireless, <span class="string">"multiple adaptersn"</span>);</span><br><span class="line">      v12 = <span class="number">0</span>;</span><br><span class="line">      v11 = <span class="number">20</span>;</span><br><span class="line">      <span class="keyword">goto</span> FindMul;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">goto</span> LABEL_4;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> ( !((<span class="keyword">unsigned</span> \_\_int8)v16 &amp; <span class="number">1</span>) || !((<span class="keyword">unsigned</span> \_\_int8)v16 &amp; <span class="number">0x40</span>) )</span><br><span class="line">  &#123;</span><br><span class="line">    CLogFile::AppendText(g\_log\_Wireless, <span class="string">"SIOCGIFFLAGS flags:%4x"</span>, (<span class="keyword">signed</span> __int16)v16);</span><br><span class="line">    <span class="keyword">goto</span> LABEL_4;</span><br><span class="line">  &#125;</span><br><span class="line">  CLogFile::AppendText(g\_log\_Wireless, <span class="string">"multiple adapters flags:%4x"</span>, (<span class="keyword">signed</span> __int16)v16);</span><br><span class="line">  v12 = <span class="number">0</span>;</span><br><span class="line">  v11 = <span class="number">20</span>;</span><br><span class="line">FindMul:</span><br><span class="line">  PostThreadMessage(*(\_DWORD *)(a1 + <span class="number">872</span>), *(\_DWORD *)(a1 + <span class="number">876</span>), v11, v12);</span><br><span class="line">  <span class="keyword">return</span> <span class="built_in">free</span>\_nics\_info(ptr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>真好。。还有输出调试，可以看出如果发现多网卡多IP等情况会跳转到FindMul这个label然后PostMessage，应该是判断出多网卡之后向线程发送一个通知信息。把这个函数nop掉就Patch掉多网卡限制了。 ————割———— 之后是Network-manager服务 查找跟service有关的，找到一个stop_service函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> \_\_cdecl service\_stop(<span class="keyword">int</span> a1)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">char</span> s; <span class="comment">// \[sp+10h\] \[bp-208h\]@1</span></span><br><span class="line"></span><br><span class="line">  <span class="built_in">memset</span>(&amp;s, <span class="number">0</span>, <span class="number">0x200</span>u);</span><br><span class="line">  <span class="built_in">sprintf</span>(&amp;s, <span class="string">"service %s stop 2&gt;&amp;-"</span>, a1);</span><br><span class="line">  system(&amp;s);</span><br><span class="line">  <span class="keyword">return</span> service_stop2(a1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个函数作用是通过传入的服务名调用system关闭服务。 查看xrefs引用 </p>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAm4AAADHCAIAAAAvRkhLAAAXxklEQVR4nO2daZgV1Z2H63NrxnFJJlFn3HBXQFTcWFqEmAgoIhqBKIsmEZClAWWRpVkFmh1ZZQcBN1wATVQUQZEkapikk7jEmMzEXTMTn0zy8c6Hc7soqk6dOlXnVNW9dd/3eZ96qou6p8751/Lrc2934zQfPoSIiIiJdXLvASIiYlXrNB8+VNdqqKHHnD30mLOHHXP2sGPOGXbsOcOOPefeY8+99xtlh3/jvOH/Ijx/xHHCC0Ycd8HIfxVeOPL4C0cdf+Go4y8adfxFo064qOGEixtOuLjhxIsbTrx49ImtR5/YevRJrUef1Gb0SW3GfLPNmG+2FY79Vtux37pEeN+/tSv77Uvvd/3OZeOEJ18+7uTLx598+fiT248/pf34U9pPOKX9hFOvEE489cqJ/y68auJ/XPVA2asfOO3qSaddPem0ayadfs2k06+ZfHqHyad3mHxGh8lndJhyRscpZwo7TT2z09SzOk09q/PUszo3ntW5sVXnxlb1ja3qp51dP+3sa4XTz+lS9twuM869rux5XWec13XmeV1nnt9NOOv8brMu+K5w9oXXt/i9By9q8eLvzyl7w5zWN8xtfcPc1t3ntuk+t033eW26z2vTY17bHvPa9mhq27Opbc+mS3o2XXJj0yU3zm934/x2NwkXXHrTgkt7Lbi014LLei287Oayl/deJGzfe1H7WxYLr+iz+Io+S67os+TKW4VLr7x16VW3CZdd/YMWb192ze0PCTv0fahD3+Ud+i7v0G95x37LO/Zb0bH/io79V3Tqv6JT/5Wdfriys/COVZ3vWFV/x6r6O1fV37n6WuGA1dcOWNNlwJouA9d0GbjmuoEPXzeobNdBa7sOXtt18Npug9d2u2ttt7vWdbtr3XfvFq6//u711/9IuOF7Py77/Z9sdL3hnk1lh2zqPmRz9yGbuw/d3GPo5h5Dt/QYuqXHsC09h23pOWxrz3u33igcvvXG4Y/cJBzxSK8R23qN2NZr5LZeI7fdPHL7zaO23zxqe+9R23uP2tG7YUfvhh23NOy4ZfSjt4x+tM/oR/uMebTPmMf6jHns1jGP3Tr2sVvHPn7b2Mdvu0/4xA/uP+Lt454U9h3/ZN/xO/uO39l3ws5+E3b2m/BUv4lP9S/7dP8Hnv6hcNIzdwgnP3PH5GfvFE55dsCUXQOm7BowddeAqbsGTt09sHH3wMbdgxp3D2rcM2jankHT9gyetmfw9D2Dpz931/Tn7pohfP7uGc/fPVP40x/NKvvj2T9z/cmDLwjvmfPCPXNevGfOi/fMfXHI3BeHzH1pyNyXhs4T7h3atHeYcP7ee+e/XHbBy8MXvDJ8wSvDF74yYuErIxbuG7Fo34hF+0Yu2jdy0asjF786Srhk/6gl+xuW7G9Yur9h6YGGpQdGLz0wetmB0cteG7PstTEPCV8fu7zsfcsP3rei7P0rD96/8o37V74xbpXw0LhVh8avFv58wpoWH/7FxBYfWPvLsut+OWndm5PWvTlp/ZuT1785ef1bk9e/NXnDW1M2vDVlw9tTNr49ZePbUze+PXXT21M3/apx068aNwsPT9t8eNqWw9O2HJ6+5T+nby0745FfC2c+8uuZ234jnLX9N7O2N8/a3jx7h/C3s3f89sFHhb+b81iLj/9u7uO/F8574vfznnhn3hPvzHvynaYn32l68t2mne827Xx3/s535+98b/5T7y0QPv3+gqffX/j0+wufeX/hM39YJHz2D4ue/WDxsx8s3vXB4l0fLNn1xyW7yy7d/eHSPR8u3fPhsj0fLnvuw2XP/WnZc3966Hnhn5c//+flPxX+14qflV35wn+7rnrxL2Vf+svqlz5a/dJHq/d+tGbvR2v2frxm78drXv744Zc/fvjlTx5+5ZO1wn2frN336Trhq5+uf/Wz9a9+tn7/Z+v3f7Zh/+cbDny+4cDnGw98vvHAFxtf+2Lja19seu2LTa9/uen1Lze//uXmg19uPvjV5oNfbTn41ZY3vtryxl+3vvHXrYeE//PIz8tu+8X/VqZEKVFKlBKlRClRSpQSpUQpUUqUEqVEac1EaSkO9fX1cfdPcJTYUeo4DlFKlBKlRClRSpTmGKWaH2E2NjaKKI21f4KjEKVEKVFKlBKlRGlNRKkTjuUolSZlBlHqnSkXIErFQIhSopQoJUqJ0gJEqXef4JZKiVIRPIlnpeLlFRWlmc1KxdiJUqKUKCVKiVKdKJX/KovGrNSbnb5k1YpS3xailCglSolSopQorbUo9U1qY7/Bq45S8Sh/74+fum/PHnvOMLHyt6//4W50o9Td4kap7+egRJT6Niqi1LubN0rdjeoo9R3IjVJ3i4hSsf713//pbj+z4xR3/aNPj/ysV6vOje66L0q9B3Kj1N2ijlJfP0WUerd4o9TdKKLU91qilCglSolSojRBlErf6bU2Ky15otSdlboPbu+sVGw5riVQFbNSsSXxrFRs+c5l48RKZJT6ZqVi42lXlxNUzErdEXlnpWLLWZ2mllfCPysVW87tMqO8ct2M87qW18/vNrNlJSJKdWalYkvbnk0taTq/XUuatrtpgZumRClRSpQSpURppcxKvXNT7xu8pVLpb1//w/cGb+lo1G/wurulGqWnXjHRPZAvSl3cKP367//0vcHr3U39Y0dulHrf4PUdSP0Gr7sbUUqUEqVEKVGacZQafVbqJrD0S/WsNCxKY31WKv4p1SgVn5WKPX2zUu9npdIoPbNlPmoSpbE+Ky2nKVFKlBKlRClRKvuh3DSi1MJP8Cb+rFTg+7Ej7z9Z+axU/DKMu6f1z0pLpZL7WalAGqXeHzvy7qz/WWlJ4w1eF+8vw7gbwz4rbXf0x6V8VkqUEqVEac1GaRian5WGzX1VURqcjHqx+BO8/ImGtH+vVIQoP8FLlBKlRGnBojTWG7ya+9v5a0fByHQcZ3YAojSNKC3JMIzSo6akRClRSpQSpdUfpY3aiCiNtX+Co6j+cCCz0sLMSvm9UqKUKCVKCxOl9SmT4Cj8zzBEKVFKlBKlRGk1RWkFSpQSpUQpUUqUEqVEqXGUIiIiYmKd5sOH9D9ZBQAAAB/lKE3ns1sAAIDicyRKpb+GkQtWOlNRIwKACoSnBNjiqCjN/e1mW52pqBEhYgXKUwItSpQiYi3KUwItSpQiYi3KUwItqorSsD8QHPbH9a2o05nIDqhvEunLpcNMdaSImKNWHjWIwohZqeP579my6ZDi+vYtEzSiHktwOzcSYlG18qiRvhZr0KqJ0ljdiGwkbGKa7HCIWHVaedRYeRUWwNhRmvabHmlHqfSbzeCbOd4twRVpKYJvCvE2EWLFGvdRE7y1pRu52WvTJLPSgkWp9NuF4EowfRUlyqBQiGhirEdN2P0ethvWmrUYpcG5o/6Kop3mkMTl7kKsQONGqfR+V78Ka8dajFKTFZ2ecIMhVr7JZqW+LcxKURj7l2GSfWumf4XpTCgjm1WPKGw9bEvwuNL+qBvJ/UwjotdYjxrfxuCKb7fcR4cZGzErzV7+RAMiZiBPCbQoUYqItShPCbToUVFq8T9vM8FKZypqRABQgfCUAFsciVIAAABIwFGz0sTUtRr6f+8vZ8mSJUuWLGtwaSdKRVuIiIg1qFGUOo7jzkoRERFrU6MorWs1lFkpYi7a/RaWb4gRTVRFaV1LUmrOSsPWK0rfAKVb8u1P2geSHtp7uq0fNEEp4najoi42K1VVv8pKfYLXQ+SrdK6fHO+mzFTcTbn3LbLnufehkKqi1E3KMOoCs9KSJ59yH1vQ4IND/SjRb82kD/ke3VcH6ycuVoMVfv3oV9XKcMJeZbE4vqYivwzbQbFSYHW++agda3nsdXFnpb4twc9KK/xGsnvp243S7I8u3ZJqlGoevTIvnsRjTDyiSovSsB3U36EWWKKUsbvGm5X6ttRFzUp9OxueJ/Om9C9974Gkh5Z2JviqsKbsHl16rOCXOhUwaVndVKyzHDZ275eRfVP0WdGyYlzSfYLtRI5Ls2LeUfiOqKiGzslSdCk4UumhwxqRNluNhg1NWi7FFrudCetP8DKQXhuaV0LkGQz2J+xykl5RuZ/cNEx9VhpcSax5U9LLSOdA0kMHrxvpSthu1o8e2R+dCkgPqjnSyD5rnqAEV1SCakhPk68DCY6e+JxqXj+26qPeHjYW6Q7BA5nf7PmarKrpDVxxoFj3abCpZHeu+iI3abl6TXdWard85k1pXvomj2/fBa35HLRydJ1yaT4c1dUOG6l3S7KTpfnIiBy+fju+Bn2NB0caWVX9cxrWclhJFYeTdkDnaklcRs0dqtSwkxjr7rbeJentpr5+Ik+Z5t0d2R9Fy4bPhGoxxqzUcZy6VkO9M1GxRX0bWyyfeVNxn0H6D1BpryIv5QyOrn6Vop3IW1TzVbFOlv7YEzwg1CvBZbKqJr4dNI8l/VJ9UJ2zHLeMds97pWnrbkqvY5qHNrlT4haqRq6NMC3PSoMnz7uzoVaaCjYibda7JThencGGvUTReOKjh1VG2o7i6MFjqVuWjl16RHdLsB1pC8FxKdpRD0qzqu56WK/0rwRFf9T91DxWsIeKkaqvMUVVg4aNK9jn4OGqTsXZCZL22KUtS48efKF6UOqRxupPnfKm0Gm2qtWdlbrr7tzUt1QU3VZfi3oOEBNo93bg5sK0LfY1FvHXjuqOzkuxZfbs2b5l2F87svhtSLG/o0FErECloWDSTu4jSkndPxxYl3RWioiIWGz5n2EQERGN5P8rZcmSJUuWLI2WdqIUAACgZiFKAQAAjLDzX38DAADULEQpQFVi9+7jXgYwwej/K/Xt4DiOu8W7XlE4HsK25NuftA8kPbTYbr0bsRoM9ifWgeL3Li2sVFX9Kiv1CV4PileFXS3qLUVFcTfl2CsdKr+HVYrNKPVuqcwTFnxwqB8l+q2Z9CHfo/vqYP3ExWqwwq+fMCLPqfnJ0tlufgjFl+qg9W2prtOXGJ2a1A61PPZS3ChV33ilir+X7F76dqM0+6NLt6QapZpHr8yLR0HkOa2RKNX5pyJBlHqp5bGX0o5Si+/2WGlK/9L3Hkh6aGlngq8Ka8ru0aXHCn6pUwGTltVN6SA9elgBI/um6LOiZcW4pPsE24kcV7BlRVPSIyqqoR54ZJeCI/V1Q6diwQpUHWEn2rdP8FWpdiasP8HLQHptaF4J0t3U/Qm7EiKvlsKQ+qw0uJK8r8ZNaV76mqMIq4ZvRVE0u0eP7I/0iDqj0BxpZJ8jCVYsvWpIT5OvAwmOnvical4/YYczvFZ1vlRsj6xAdZGsqtItdvuj7mGCJ0CyO1d9kZu0XL0QpZbDzHdBJ3joGD4cFe1E9ifyoO4W6Ui9W5KdLP0rKm4GJI5SnXElO6dhLXtfFXw+Sg8n7UCsB6jOl4rtkRWoLsJOYqy723qXpLeb+voJbte5U8IuPEV/FC0bPhOqhRhRGjxzimqmUT7zpuI+g/QfoNJeRV7KGRxd/SpFO5G3qOarYp0s/bEneECoV4JLzXZ01m1VNexL9UEVLeiXUfPekQ6k6rB1N6XXMc1Dm9wpsfqjaJkojfHY9W0MPvWs1M5KU8FGpM16t3h3kL5W2lTYSxSNJz56WGWk7SiOHjyWumXp2KVHdLcE25G2EByXoh31oDSr6q6H9UrRH0Xj6lGE1VB9rGAPFSMNK4jjIawdabM6LavbqQoUgw0S/NeUOqNztfheqB6UeqSx+lNS3hQ6zVY1ulHqBO5/zevGYuGKeg4AEmD3duDmgrQp9jUW8deOpN98zQ4Q2rq9b0OK/R0NAEAFEmvipNOO3e5VDrp/ODDxrBQAAKDY8D/DAAAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGEGUAgAAGHEkSpsPH9I37v6IiIVXPBhLpRLLAixjeVSUasZv3P0BAAqP+/Ze7hnA0uJS89T7o1QnfuPuj4hYeH0PRpbVvvSuRJ56ohQR0YLMSou61Dn10VHqOI70itE/DCJi4WVWWrCld0UYTEP31EdEqeM4RCkiYqTMSou6dJUGYnNklDotSK+Y4P6IiDUrs9KCLb0rQkUmhkap40F9xSAiIrPSoi5dw2KRWSkioh2ZlRZs6V0RJpmVel+pvmIQEZFZaVGXrgk/K3VfLL1iwvZHRKxBmZUWbOldESb/CV6dKwYREZmVFnWpc+qJUkRECzIrLdjSuxJ56olSREQLMist6lLn1B8VpY3axN0fAKDwMCst0jJWxh2JUgAAMKQSMoCllWWs816O0ua83xtBRESsUp3mw4dKAAAAkBT5b8kgIiKipkQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikUQpIiKikURp5hUvOibFyfv/HEyX+vp6ihMGxVFgWBzMQKI084o7Tt43ZlrU19ebR2nuJyglGxsbzdMi91FQnGosDmYgUZp5xR2nkLe9uOGJUnV9KA7Fyb44mIFEaeYVJ0rDLWRlvPWhOBQn++JgBhKlmVecKA23kJXx1ofiUJzsi4MZSJRmXnGiNNxCVsZbH4pDcbIvDmYgUZp5xYnScAtZGW99KA7Fyb44mIFEaeYVJ0rDLWRlvPWhOBQn++JgBhKlmVc85Sj1/X6n90vz3/tUmHuU2vrdVnU9DeuTV3GkgwqupzHwyi9OqldOJRQHM5AozbziaUap99b1PiuD/2rdfKNUOvCUCmtSn1yKox6RemiFj9JUrxyitHYkSjOveE5RmvYzsXKiNO3CmtQnl+KoR0SUpjcuorR2JEozr3geUZrBA7Eyo1T6Xrdv5+BG6T5W6pNLcRSViTXwlN4Izb040hGFXSe+dWkBg5dcvsXBDCRKM684s9Jw7UZpcOKVbMVK9SowShMMXHMuW43FUdw7YSuRxbFSLqK0KiRKM684URpuSrPSWM+4sOmalfrkUhx1xYJTqNqMUp1SSK+lsFrZKhdRWhUSpZlXnB87CtfuD4/EnXoqqlQjURo58OJFqfrKiVUuorSWJUozrzi/DBOulV9pkG70zTPCShRWNGnjCeqTV3GktQpbVwzcvA6VVpywk6u4KhTXg7SAzWa3HlFaFRKlmVecP9EQbiEr461PtRfHeogWqTgpSZRWhURp5hUnSsMtZGW89anq4qQ0JS1GcdKTKK0KidLMK06UhlvIynjrQ3EoTvbFwQwkSjOvOFEabiEr460PxaE42RcHM5AozbziRGm4hayMtz4Uh+JkXxzMQKI084oTpeEWsjLe+lAcipN9cTADidLMK+44pVKpsYgQpQobSQuKk1NxMAOJ0swr7jj1xcU8SnP+diBN6o3TIu8RpAjFUWBYHMxAojTzihcdk+Lk+V1AJlAcBRRHQe4PLlRLlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhpJlCIiIhrpNB8+lPf/IAQAAFDFlKM090hHRESsUolSREREI4lSREREI49EqdOCf4/AloRHStpOWMd0/hURETFtj5qVphdIidNO/Srvv5KmiIiYixlFaeLGiVJERKxkS6VSRJT6ZpOOB8VuUnWiTvNwyRpHRES0a6lU8v8yjDSQgqkZuSJVPw7jzjXJUUREzF6Ro9aiVGfumFKUkqOIiJi9bo42Kz4rDZtrxp2MBl8YuYN+lJKjiIiYvd4cPeqzUieAd6N4cfCfgtul6n/kGeuz0mCHERERU9WXo/zhQERExBgGc5QoRURE1FWao8384UBEREQdw3LU/3uliIiIGFSRo+U3eEsAAACgRBG0/NQrIiKikf8PjWLIdK57WXkAAAAASUVORK5CYII=" alt> </p>
+<p>都是在EnvironmentCheck中引用。 查看下这个函数发现第一处的引用是关闭Network-Manager的。nop掉他，结束。 x64的也是类似的，就不重复了</p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/rjsupplicant/">rjsupplicant</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/process-monoalphabetic-substitution-cipher/"
+                    data-tooltip="辅助处理单表替换密码"
+                    aria-label="PREVIOUS: 辅助处理单表替换密码"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/lianliankan-cheater/"
+                    data-tooltip="连连看外挂——人生真是寂寞如雪啊"
+                    aria-label="NEXT: 连连看外挂——人生真是寂寞如雪啊"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/process-monoalphabetic-substitution-cipher/"
+                    data-tooltip="辅助处理单表替换密码"
+                    aria-label="PREVIOUS: 辅助处理单表替换密码"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/uncategorized/lianliankan-cheater/"
+                    data-tooltip="连连看外挂——人生真是寂寞如雪啊"
+                    aria-label="NEXT: 连连看外挂——人生真是寂寞如雪啊"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/uncategorized/rjsupplicant-for-linux/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>

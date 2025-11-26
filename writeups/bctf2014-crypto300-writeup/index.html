@@ -1,0 +1,675 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Eadom&#39;s Blog">
+    <title>BCTF2014线上赛crypto300比特币钱包writeup - Eadom&#39;s Blog</title>
+    <meta name="author" content="Eadom">
+    
+    
+        <link rel="icon" href="https://blog.eadom.net/assets/images/avatar.jpg">
+    
+    
+        
+            <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+        
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg"},"articleBody":"比特币钱包: 300 描述\n来到中国后，米特尼克 身无分文了，怎样赚一大笔钱以备不时之需呢？比特币的爆发引起了他的注意。FBI 从丝绸之路缴获的大量比特币成了他的目标，他也想借此机会嘲笑一下 FBI。不费吹灰之力，他就搞定了这笔比特币巨款。你知道他是怎么搞定的吗？http://bctf.cn/files/downloads /robotum_9332cfdb5e503889e24e757d962a7454.html\n提示\n1. 机器人的眼睛是一个时钟，时钟是会走的阿，亲！2. 要做出此题，请先研究清楚比特币地址签名机制和 warpwallet 的用途3. 邮件发送格式说明，邮件内容那一行千万别写中文，verify 的部分不包含首尾的空格和回车(也就是 strip)，下面的 signature 是 base64 串，可以使用 bitcoin-qt 客户端进行 sign 和 verify message 来验证   http://bctf.cn/files/downloads/robotum_9332cfdb5e503889e24e757d962a7454.html内容如下 \n嘿！你们好！\n我是 FBI 的比特币守护机器人，我的地址是 robotum.ctf@gmail.com, 我正在守护着 FBI 的一个重要比特币地址 1Atk95NnaQDiegEkqjJvg6c2KkJbSr2BEL （听说里面有很多钱！）。\n你们知道吗？最近我学会了使用 Warpwallet，它既简单，又强大，还易于使用。哈哈！你们肯定没法猜到我的密钥是什么，不要偷窥哦。\n好了，如果我的主人想取回存储在我这里的机密信息的话，只需要向我发送邮件就可以了。当然，邮件要使用这个重要比特币地址来签名，另外，你还要告诉我你想要取什么东西，只有让我验证通过了我才能告诉你。\n为了避免忘记，我再重复一遍邮件的格式。\n—–BEGIN BITCOIN SIGNED MESSAGE—–这里写邮件的内容啦！—–BEGIN SIGNATURE—–这里是签名串—–END BITCOIN SIGNED MESSAGE—–\n祝你们好运！\n这道题完全是靠第一个提示做出来的。。。 在那个网页中发现机器人用的是Warpwallet，于是先google下 https://keybase.io/warp/warp_1.0.6_SHA256_e68d4587b0e2ec34a7b554fbd1ed2d0fedfaeacf3e47fbb6c5403e252348cbfc.html 这个是通过Warpwallet用Passphrase和salt生产比特币地址(公钥)和private key 同时还有相关算法的说明   推 测salt应该就是那个机器人的email，那passphrase呢。。。看第一个提示，猜测是个时间然后就用这个算法找碰撞。。。一开始只从时钟上的 时间试到12点，没跑出来，后面把所有时间都跑了。。结果出了结果20:20，然后就能跑出他的private key啦   算法的代码是github上来的\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123#!/usr/bin/env python#\\# Author: patricklundquist@gmail.com#\\# Description: Implements the WarpWallet algorithm as descibed below:#\\# s1 = scrypt(key=(passphrase||0x1), salt=(salt||0x1), N=2^18, r=8, p=1, dkLen=32)\\# s2 = pbkdf2(key=(passphrase||0x2), salt=(salt||0x2), c=2^16, dkLen=32, prf=HMAC_SHA256)\\# keypair = generate\\_bitcoin\\_keypair(s1 xor s2)##modified by ROIS_yufan for BCTF2013 crypto300import argparseimport binasciiimport jsonimport scryptimport sysfrom passlib.utils import pbkdf2from pycoin import ecdsa, encodingfrom pycoin.ecdsa import secp256k1class WarpWallet(object):  def \\_\\_init\\_\\_(self, pbkdf2\\_count, derived\\_key\\_len, scrypt\\_power, scrypt_p,               scrypt_r):    self.dklen = derived\\_key\\_len    self.pbkdf2\\_count = pbkdf2\\_count    self.scrypt\\_power = scrypt\\_power    self.scrypt\\_r = scrypt\\_r    self.scrypt\\_p = scrypt\\_p  def warp(self, passphrase, salt=\"\"):    \"\"\"    Return dictionary of WarpWallet public and private keys corresponding to    the given passphrase and salt.    \"\"\"    s1 = binascii.hexlify(self._scrypt(passphrase, salt))    out = self._pbkdf2(passphrase, salt)    s2 = binascii.hexlify(out)    base = binascii.unhexlify(s1)    s3 = binascii.hexlify(self._sxor(base,out))    secret_exponent = int(s3, 16)    public\\_pair = ecdsa.public\\_pair\\_for\\_secret\\_exponent(secp256k1.generator\\_secp256k1, secret_exponent)    #private\\_key = encoding.secret\\_exponent\\_to\\_wif(secret_exponent, compressed=False)    public\\_key = encoding.public\\_pair\\_to\\_bitcoin\\_address(public\\_pair, compressed=False)    out = public_key    return out  def _scrypt(self, passphrase, salt=\"\"):    scrypt_key = passphrase + \"x01\"    scrypt_salt = salt + \"x01\"    out = scrypt.hash(scrypt\\_key, scrypt\\_salt, N=2**self.scrypt_power,                      r=self.scrypt\\_r, p=self.scrypt\\_p, buflen=self.dklen)    return out  def _pbkdf2(self, passphrase, salt=\"\"):    hexlified_key = binascii.hexlify(passphrase) + \"02\"    pbkdf2\\_key = binascii.unhexlify(hexlified\\_key)    hexlified_salt = binascii.hexlify(salt) + \"02\"    pbkdf2\\_salt = binascii.unhexlify(hexlified\\_salt)    out = pbkdf2.pbkdf2(secret=pbkdf2\\_key, salt=pbkdf2\\_salt, keylen=self.dklen,                        rounds=self.pbkdf2\\_count, prf='hmac\\_sha256')    return out  def _sxor (self, s1, s2):    # Convert strings to a list of character pair tuples,    # go through each tuple, converting them to ASCII code (ord),    # perform exclusive or on the ASCII code,    # then convert the result back to ASCII (chr),    # merge the resulting array of characters as a string.    return ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1,s2))def parse_args():  parser = argparse.ArgumentParser()  parser.add\\_argument(\"-c\", \"--pbkdf2\\_count\",                      help=\"iteration count\",                      type=int,                      default=2**16)  parser.add_argument(\"-d\", \"--dklen\",                      help=\"derived key length\",                      type=int,                      default=32)  parser.add\\_argument(\"-n\", \"--scrypt\\_power\",                      help=\"2^n passed as the 'N' param to scrypt\",                      type=int,                      default=18)  parser.add\\_argument(\"-p\", \"--scrypt\\_p\",                      help=\"'p' param to scrypt\",                      type=int,                      default=1)  parser.add\\_argument(\"-r\", \"--scrypt\\_r\",                      help=\"'r' param to scrypt\",                      type=int,                      default=8)  parser.add_argument(\"-P\", \"--passphrase\" ,                      help=\"passphrase\",                      type=str)  parser.add_argument(\"-S\", \"--salt\" ,                      help=\"salt\",                      type=str)  args = parser.parse_args()  if not args.passphrase:    print \"Must provide passphrase (-P)\"    sys.exit(1)  if not args.salt:    print \"Must provide salt (-S)\"    sys.exit(1)  return argsif \\_\\_name\\_\\_ == \"\\_\\_main\\_\\_\":    f = open(\"c300dict.txt\", 'r')    for line in f:        strpass = line.strip()        salt = 'robotum.ctf@gmail.com'        wallet = WarpWallet(2**16, 32, 18,1, 8)        str = wallet.warp(strpass, salt)        if str == '1Atk95NnaQDiegEkqjJvg6c2KkJbSr2BEL':            print 'get!', strpass            break        print line\n然后签名发邮件就ok啦，注意按题目要求的格式发。 http://p2pbucks.com/tools/brainwallet/index.html#sign\n","dateCreated":"2014-04-02T15:27:26+08:00","dateModified":"2025-11-21T20:45:50+08:00","datePublished":"2014-04-02T15:27:26+08:00","description":"","headline":"BCTF2014线上赛crypto300比特币钱包writeup","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"},"publisher":{"@type":"Organization","name":"Eadom","sameAs":["https://github.com/eadom","https://www.linkedin.com/in/yukunliu/","http://weibo.com/onetpig","https://twitter.com/Yufan_L"],"image":"avatar.jpg","logo":{"@type":"ImageObject","url":"avatar.jpg"}},"url":"https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/","keywords":"writeup, bctf"}</script>
+    <meta name="description" content="比特币钱包: 300 描述 来到中国后，米特尼克 身无分文了，怎样赚一大笔钱以备不时之需呢？比特币的爆发引起了他的注意。FBI 从丝绸之路缴获的大量比特币成了他的目标，他也想借此机会嘲笑一下 FBI。不费吹灰之力，他就搞定了这笔比特币巨款。你知道他是怎么搞定的吗？http://bctf.cn/files/downloads /robotum_9332cfdb5e503889e24e757d962a">
+<meta name="keywords" content="writeup,bctf">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="BCTF2014线上赛crypto300比特币钱包writeup">
+<meta property="og:url" content="https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/index.html">
+<meta property="og:site_name" content="Eadom&#39;s Blog">
+<meta property="og:description" content="比特币钱包: 300 描述 来到中国后，米特尼克 身无分文了，怎样赚一大笔钱以备不时之需呢？比特币的爆发引起了他的注意。FBI 从丝绸之路缴获的大量比特币成了他的目标，他也想借此机会嘲笑一下 FBI。不费吹灰之力，他就搞定了这笔比特币巨款。你知道他是怎么搞定的吗？http://bctf.cn/files/downloads /robotum_9332cfdb5e503889e24e757d962a">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="http://img.blog.csdn.net/20140313121323171?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta property="og:updated_time" content="2025-11-21T12:45:50.764Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BCTF2014线上赛crypto300比特币钱包writeup">
+<meta name="twitter:description" content="比特币钱包: 300 描述 来到中国后，米特尼克 身无分文了，怎样赚一大笔钱以备不时之需呢？比特币的爆发引起了他的注意。FBI 从丝绸之路缴获的大量比特币成了他的目标，他也想借此机会嘲笑一下 FBI。不费吹灰之力，他就搞定了这笔比特币巨款。你知道他是怎么搞定的吗？http://bctf.cn/files/downloads /robotum_9332cfdb5e503889e24e757d962a">
+<meta name="twitter:image" content="http://img.blog.csdn.net/20140313121323171?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
+<meta name="twitter:creator" content="@Yufan_L">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://blog.eadom.net/assets/images/avatar.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-sifsy9oex2dugunw1y6dni61b2yek7gdovchv6fh3t7csw6uv5ophjuqcfmz.min.css">
+    <!--STYLES END-->
+    
+
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?e2c34d89d7cd8c97b8b39f770eac6769";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="1">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            Eadom&#39;s Blog
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="Open the link: /#about"
+            >
+        
+        
+            <img class="header-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="1">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a
+                    href="/#about"
+                    aria-label="Read more about the author"
+                >
+                    <img class="sidebar-profile-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+                </a>
+                <h4 class="sidebar-profile-name">Eadom</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>NO PWN NO FUN</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="Home"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="Categories"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="Tags"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="Archives"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="About"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/eadom"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/in/yukunliu/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://weibo.com/onetpig"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Weibo"
+                        >
+                        <i class="sidebar-button-icon fab fa-weibo" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Weibo</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/Yufan_L"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="1"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            BCTF2014线上赛crypto300比特币钱包writeup
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2014-04-02T15:27:26+08:00">
+	
+		    Apr 02, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>比特币钱包: 300 描述</p>
+<p>来到中国后，米特尼克 身无分文了，怎样赚一大笔钱以备不时之需呢？比特币的爆发引起了他的注意。FBI 从丝绸之路缴获的大量比特币成了他的目标，他也想借此机会嘲笑一下 FBI。不费吹灰之力，他就搞定了这笔比特币巨款。你知道他是怎么搞定的吗？<a href="http://bctf.cn/files/downloads" target="_blank" rel="noopener">http://bctf.cn/files/downloads</a> /robotum_9332cfdb5e503889e24e757d962a7454.html</p>
+<p>提示</p>
+<p>1. 机器人的眼睛是一个时钟，时钟是会走的阿，亲！2. 要做出此题，请先研究清楚比特币地址签名机制和 warpwallet 的用途3. 邮件发送格式说明，邮件内容那一行千万别写中文，verify 的部分不包含首尾的空格和回车(也就是 strip)，下面的 signature 是 base64 串，可以使用 bitcoin-qt 客户端进行 sign 和 verify message 来验证   <a href="http://bctf.cn/files/downloads/robotum_9332cfdb5e503889e24e757d962a7454.html内容如下" target="_blank" rel="noopener">http://bctf.cn/files/downloads/robotum_9332cfdb5e503889e24e757d962a7454.html内容如下</a> <img src="http://img.blog.csdn.net/20140313121323171?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQveXVmYW5waQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast" alt></p>
+<p>嘿！你们好！</p>
+<p>我是 FBI 的比特币守护机器人，我的地址是 <a href="mailto:robotum.ctf@gmail.com" target="_blank" rel="noopener">robotum.ctf@gmail.com</a>, 我正在守护着 FBI 的一个重要比特币地址 1Atk95NnaQDiegEkqjJvg6c2KkJbSr2BEL （听说里面有很多钱！）。</p>
+<p>你们知道吗？最近我学会了使用 Warpwallet，它既简单，又强大，还易于使用。哈哈！你们肯定没法猜到我的密钥是什么，不要偷窥哦。</p>
+<p>好了，如果我的主人想取回存储在我这里的机密信息的话，只需要向我发送邮件就可以了。当然，邮件要使用这个重要比特币地址来签名，另外，你还要告诉我你想要取什么东西，只有让我验证通过了我才能告诉你。</p>
+<p>为了避免忘记，我再重复一遍邮件的格式。</p>
+<p>—–BEGIN BITCOIN SIGNED MESSAGE—–<br>这里写邮件的内容啦！<br>—–BEGIN SIGNATURE—–<br>这里是签名串<br>—–END BITCOIN SIGNED MESSAGE—–</p>
+<p>祝你们好运！</p>
+<p>这道题完全是靠第一个提示做出来的。。。 在那个网页中发现机器人用的是Warpwallet，于是先google下 <a href="https://keybase.io/warp/warp_1.0.6_SHA256_e68d4587b0e2ec34a7b554fbd1ed2d0fedfaeacf3e47fbb6c5403e252348cbfc.html" target="_blank" rel="noopener">https://keybase.io/warp/warp_1.0.6_SHA256_e68d4587b0e2ec34a7b554fbd1ed2d0fedfaeacf3e47fbb6c5403e252348cbfc.html</a> 这个是通过Warpwallet用Passphrase和salt生产比特币地址(公钥)和private key 同时还有相关算法的说明   推 测salt应该就是那个机器人的email，那passphrase呢。。。看第一个提示，猜测是个时间然后就用这个算法找碰撞。。。一开始只从时钟上的 时间试到12点，没跑出来，后面把所有时间都跑了。。结果出了结果20:20，然后就能跑出他的private key啦   算法的代码是github上来的</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line">\<span class="comment"># Author: patricklundquist@gmail.com</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line">\<span class="comment"># Description: Implements the WarpWallet algorithm as descibed below:</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line">\<span class="comment"># s1 = scrypt(key=(passphrase||0x1), salt=(salt||0x1), N=2^18, r=8, p=1, dkLen=32)</span></span><br><span class="line">\<span class="comment"># s2 = pbkdf2(key=(passphrase||0x2), salt=(salt||0x2), c=2^16, dkLen=32, prf=HMAC_SHA256)</span></span><br><span class="line">\<span class="comment"># keypair = generate\_bitcoin\_keypair(s1 xor s2)</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#modified by ROIS_yufan for BCTF2013 crypto300</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> argparse</span><br><span class="line"><span class="keyword">import</span> binascii</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> scrypt</span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">from</span> passlib.utils <span class="keyword">import</span> pbkdf2</span><br><span class="line"><span class="keyword">from</span> pycoin <span class="keyword">import</span> ecdsa, encoding</span><br><span class="line"><span class="keyword">from</span> pycoin.ecdsa <span class="keyword">import</span> secp256k1</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WarpWallet</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> \<span class="title">_</span>\<span class="title">_init</span>\<span class="title">_</span>\<span class="title">_</span><span class="params">(self, pbkdf2\_count, derived\_key\_len, scrypt\_power, scrypt_p,</span></span></span><br><span class="line"><span class="function"><span class="params">               scrypt_r)</span>:</span></span><br><span class="line">    self.dklen = derived\_key\_len</span><br><span class="line">    self.pbkdf2\_count = pbkdf2\_count</span><br><span class="line">    self.scrypt\_power = scrypt\_power</span><br><span class="line">    self.scrypt\_r = scrypt\_r</span><br><span class="line">    self.scrypt\_p = scrypt\_p</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">warp</span><span class="params">(self, passphrase, salt=<span class="string">""</span>)</span>:</span></span><br><span class="line">    <span class="string">"""</span></span><br><span class="line"><span class="string">    Return dictionary of WarpWallet public and private keys corresponding to</span></span><br><span class="line"><span class="string">    the given passphrase and salt.</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line">    s1 = binascii.hexlify(self._scrypt(passphrase, salt))</span><br><span class="line">    out = self._pbkdf2(passphrase, salt)</span><br><span class="line">    s2 = binascii.hexlify(out)</span><br><span class="line">    base = binascii.unhexlify(s1)</span><br><span class="line">    s3 = binascii.hexlify(self._sxor(base,out))</span><br><span class="line">    secret_exponent = int(s3, <span class="number">16</span>)</span><br><span class="line">    public\_pair = ecdsa.public\_pair\_for\_secret\_exponent(secp256k1.generator\_secp256k1, secret_exponent)</span><br><span class="line">    <span class="comment">#private\_key = encoding.secret\_exponent\_to\_wif(secret_exponent, compressed=False)</span></span><br><span class="line">    public\_key = encoding.public\_pair\_to\_bitcoin\_address(public\_pair, compressed=<span class="literal">False</span>)</span><br><span class="line">    out = public_key</span><br><span class="line">    <span class="keyword">return</span> out</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">_scrypt</span><span class="params">(self, passphrase, salt=<span class="string">""</span>)</span>:</span></span><br><span class="line">    scrypt_key = passphrase + <span class="string">"x01"</span></span><br><span class="line">    scrypt_salt = salt + <span class="string">"x01"</span></span><br><span class="line">    out = scrypt.hash(scrypt\_key, scrypt\_salt, N=<span class="number">2</span>**self.scrypt_power,</span><br><span class="line">                      r=self.scrypt\_r, p=self.scrypt\_p, buflen=self.dklen)</span><br><span class="line">    <span class="keyword">return</span> out</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">_pbkdf2</span><span class="params">(self, passphrase, salt=<span class="string">""</span>)</span>:</span></span><br><span class="line">    hexlified_key = binascii.hexlify(passphrase) + <span class="string">"02"</span></span><br><span class="line">    pbkdf2\_key = binascii.unhexlify(hexlified\_key)</span><br><span class="line">    hexlified_salt = binascii.hexlify(salt) + <span class="string">"02"</span></span><br><span class="line">    pbkdf2\_salt = binascii.unhexlify(hexlified\_salt)</span><br><span class="line">    out = pbkdf2.pbkdf2(secret=pbkdf2\_key, salt=pbkdf2\_salt, keylen=self.dklen,</span><br><span class="line">                        rounds=self.pbkdf2\_count, prf=<span class="string">'hmac\_sha256'</span>)</span><br><span class="line">    <span class="keyword">return</span> out</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">_sxor</span> <span class="params">(self, s1, s2)</span>:</span></span><br><span class="line">    <span class="comment"># Convert strings to a list of character pair tuples,</span></span><br><span class="line">    <span class="comment"># go through each tuple, converting them to ASCII code (ord),</span></span><br><span class="line">    <span class="comment"># perform exclusive or on the ASCII code,</span></span><br><span class="line">    <span class="comment"># then convert the result back to ASCII (chr),</span></span><br><span class="line">    <span class="comment"># merge the resulting array of characters as a string.</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">''</span>.join(chr(ord(a) ^ ord(b)) <span class="keyword">for</span> a,b <span class="keyword">in</span> zip(s1,s2))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">parse_args</span><span class="params">()</span>:</span></span><br><span class="line">  parser = argparse.ArgumentParser()</span><br><span class="line">  parser.add\_argument(<span class="string">"-c"</span>, <span class="string">"--pbkdf2\_count"</span>,</span><br><span class="line">                      help=<span class="string">"iteration count"</span>,</span><br><span class="line">                      type=int,</span><br><span class="line">                      default=<span class="number">2</span>**<span class="number">16</span>)</span><br><span class="line">  parser.add_argument(<span class="string">"-d"</span>, <span class="string">"--dklen"</span>,</span><br><span class="line">                      help=<span class="string">"derived key length"</span>,</span><br><span class="line">                      type=int,</span><br><span class="line">                      default=<span class="number">32</span>)</span><br><span class="line">  parser.add\_argument(<span class="string">"-n"</span>, <span class="string">"--scrypt\_power"</span>,</span><br><span class="line">                      help=<span class="string">"2^n passed as the 'N' param to scrypt"</span>,</span><br><span class="line">                      type=int,</span><br><span class="line">                      default=<span class="number">18</span>)</span><br><span class="line">  parser.add\_argument(<span class="string">"-p"</span>, <span class="string">"--scrypt\_p"</span>,</span><br><span class="line">                      help=<span class="string">"'p' param to scrypt"</span>,</span><br><span class="line">                      type=int,</span><br><span class="line">                      default=<span class="number">1</span>)</span><br><span class="line">  parser.add\_argument(<span class="string">"-r"</span>, <span class="string">"--scrypt\_r"</span>,</span><br><span class="line">                      help=<span class="string">"'r' param to scrypt"</span>,</span><br><span class="line">                      type=int,</span><br><span class="line">                      default=<span class="number">8</span>)</span><br><span class="line">  parser.add_argument(<span class="string">"-P"</span>, <span class="string">"--passphrase"</span> ,</span><br><span class="line">                      help=<span class="string">"passphrase"</span>,</span><br><span class="line">                      type=str)</span><br><span class="line">  parser.add_argument(<span class="string">"-S"</span>, <span class="string">"--salt"</span> ,</span><br><span class="line">                      help=<span class="string">"salt"</span>,</span><br><span class="line">                      type=str)</span><br><span class="line">  args = parser.parse_args()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> <span class="keyword">not</span> args.passphrase:</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"Must provide passphrase (-P)"</span></span><br><span class="line">    sys.exit(<span class="number">1</span>)</span><br><span class="line">  <span class="keyword">if</span> <span class="keyword">not</span> args.salt:</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"Must provide salt (-S)"</span></span><br><span class="line">    sys.exit(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> args</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> \_\_name\_\_ == <span class="string">"\_\_main\_\_"</span>:</span><br><span class="line">    f = open(<span class="string">"c300dict.txt"</span>, <span class="string">'r'</span>)</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> f:</span><br><span class="line">        strpass = line.strip()</span><br><span class="line">        salt = <span class="string">'robotum.ctf@gmail.com'</span></span><br><span class="line">        wallet = WarpWallet(<span class="number">2</span>**<span class="number">16</span>, <span class="number">32</span>, <span class="number">18</span>,<span class="number">1</span>, <span class="number">8</span>)</span><br><span class="line">        str = wallet.warp(strpass, salt)</span><br><span class="line">        <span class="keyword">if</span> str == <span class="string">'1Atk95NnaQDiegEkqjJvg6c2KkJbSr2BEL'</span>:</span><br><span class="line">            <span class="keyword">print</span> <span class="string">'get!'</span>, strpass</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        <span class="keyword">print</span> line</span><br></pre></td></tr></table></figure>
+<p>然后签名发邮件就ok啦，注意按题目要求的格式发。 <a href="http://p2pbucks.com/tools/brainwallet/index.html#sign" target="_blank" rel="noopener">http://p2pbucks.com/tools/brainwallet/index.html#sign</a></p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/bctf/">bctf</a> <a class="tag tag--primary tag--small t-link" href="/tags/writeup/">writeup</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto400-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto400地铁难挤writeup"
+                    aria-label="PREVIOUS: BCTF2014线上赛crypto400地铁难挤writeup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto100-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto100混沌密码锁writeup"
+                    aria-label="NEXT: BCTF2014线上赛crypto100混沌密码锁writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2025 Eadom. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto400-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto400地铁难挤writeup"
+                    aria-label="PREVIOUS: BCTF2014线上赛crypto400地铁难挤writeup"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/writeups/bctf2014-crypto100-writeup/"
+                    data-tooltip="BCTF2014线上赛crypto100混沌密码锁writeup"
+                    aria-label="NEXT: BCTF2014线上赛crypto100混沌密码锁writeup"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Twitter"
+                    aria-label="Share on Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                    title="Share on Google+"
+                    aria-label="Share on Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                        aria-label="Share on Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                        aria-label="Share on Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://blog.eadom.net/writeups/bctf2014-crypto300-writeup/"
+                        aria-label="Share on Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <img id="about-card-picture" src="/assets/images/avatar.jpg" alt="Author&#39;s picture"/>
+        
+            <h4 id="about-card-name">Eadom</h4>
+        
+            <div id="about-card-bio"><p>NO PWN NO FUN</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>@Alibaba</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                Hangzhou
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.png');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rmcrjyesoiaq5zeyncix4j3bagwy19cwj9vg041guvn2zdknk0vkkwd3bneh.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+
+    </body>
+</html>
