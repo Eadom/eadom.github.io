@@ -609,317 +609,6 @@
                     
                         <a
                             class="link-unstyled"
-                            href="/uncategorized/cong-biangeng-jiaodu-fupan-cloudflare-11-18-guzhang-0ctf2015-writeup/"
-                            aria-label=": 从变更角度“复盘” Cloudflare 11·18 故障0CTF2015 Writeup"
-                        >
-                            从变更角度“复盘” Cloudflare 11·18 故障0CTF2015 Writeup
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2025-11-26T21:31:51+08:00">
-	
-		    Nov 26, 2025
-    	
-    </time>
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-content">
-                    <h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><p>2025 年 11 月 18 日，Cloudflare 遭遇了一次影响范围不小的故障，导致其部分服务在一段时间内出现明显异常、访问失败或性能下降；具体影响范围可以参考 Cloudflare 在官方博客中发布的复盘报告<a href="https://blog.cloudflare.com/18-november-2025-outage/" target="_blank" rel="noopener">《Cloudflare outage on November 18, 2025》</a>。</p>
-<p>事后 Cloudflare 很快发布了详细的技术复盘报告，把这次故障的来龙去脉讲得比较清楚：<strong>直接诱因是一项数据库权限配置变更</strong>，而下游某些 Rust 服务在异常路径上的健壮性不足，被这次变更“精准命中”，最终演化成大面积的服务不可用。在复盘文章里，可以看到典型的 <code>unwrap</code> 使用导致程序在遇到异常数据时直接崩溃，这一点也迅速成了社区讨论的焦点。</p>
-<p><code>unwrap</code> 确实是这次事故的重要触发点之一，但如果只停留在“不要乱用 unwrap”这个层面，我们能学到的东西其实很有限。<strong>在真实的工程环境里，数据库权限、配置项、安全策略，这类“看起来只是调一下配置”的变更，在研发和安全团队的日常工作中非常常见，而且数量巨大</strong>。很多时候，它们并不会被当成高风险操作对待，更不会被放到和“发一版代码”同等严肃的变更流程里去审视。</p>
-<p>正因为如此，在大家都在吐槽 <code>unwrap</code> 的时候，我更想换一个视角：站在一个局外人的位置，只基于 Cloudflare 公开的技术文章，<strong>从“变更”的角度，来看看这次事故里有哪些稳定性和安全运维层面的经验教训，是我们在日常做配置 / 安全控制变更时可以借鉴的</strong>。</p>
-<h2 id="2-事件回顾和-Cloudflare-的技术报告"><a href="#2-事件回顾和-Cloudflare-的技术报告" class="headerlink" title="2. 事件回顾和 Cloudflare 的技术报告"></a>2. 事件回顾和 Cloudflare 的技术报告</h2><p>在进入后面的讨论之前，我先按照 Cloudflare 官方技术文章里的信息，把这次故障的经过简单串一下。几个关键时间点（UTC）：</p>
-<ul>
-<li><strong>11:05</strong>：数据库访问控制变更部署</li>
-<li><strong>11:28</strong>：影响开始产生（Impact starts）</li>
-<li><strong>13:05</strong>：对 Workers KV / Access 启用 bypass，影响降低</li>
-<li><strong>13:37</strong>：确认 Bot Management 配置文件为触发点，开始回滚/修复至 last-known-good</li>
-<li><strong>14:30</strong>：主要影响解除（Main impact resolved）</li>
-<li><strong>17:06</strong>：所有服务恢复（All services resolved）</li>
-</ul>
-<p>在这个时间线里，Cloudflare 官方给出的故事大致可以拆成以下几步。</p>
-<h3 id="2-1-起点：数据库访问控制变更（11-05-UTC）"><a href="#2-1-起点：数据库访问控制变更（11-05-UTC）" class="headerlink" title="2.1 起点：数据库访问控制变更（11:05 UTC）"></a>2.1 起点：数据库访问控制变更（11:05 UTC）</h3><p>从官方时间线来看，这次事故的起点很清晰：<strong>11:05 UTC，Cloudflare 在一套用于生成 Bot Management 特征配置的数据库上，部署了一次权限相关的配置变更（database access control change）。</strong></p>
-<p>Cloudflare 在复盘里解释，这次变更的初衷是：</p>
-<ul>
-<li>把原本“隐式”的表访问权限改成“显式授权”，</li>
-<li>让分布式查询可以在真实用户账户而不是共享系统账户下执行，</li>
-<li>这样才能对每个用户的查询更细粒度地评估访问授权和查询限额（access grants / query limits），从安全和资源控制角度把关。</li>
-</ul>
-<p>问题在于：生成 Bot Management <strong>feature file（特征配置文件）</strong> 的那条查询并没有显式区分哪些库/表应该被统计进去。变更生效后，这条查询突然多拿到了一批原本不会出现的信息，导致：</p>
-<ul>
-<li>查询结果的行数接近翻倍；</li>
-<li>按这个结果生成的 feature file 体积也明显变大，特征数量远超正常水平；</li>
-<li>这份“变胖了”的配置文件依然按原有节奏在全网周期性刷新和分发。</li>
-</ul>
-<p>就变更本身来说，它在当时<strong>看上去更像是一条常规的权限/安全配置调整</strong>，而不是那种一眼就会被当作“高危大变更”的架构级操作。</p>
-<h3 id="2-2-症状出现：核心流量异常（11-28-UTC-之后）"><a href="#2-2-症状出现：核心流量异常（11-28-UTC-之后）" class="headerlink" title="2.2 症状出现：核心流量异常（11:28 UTC 之后）"></a>2.2 症状出现：核心流量异常（11:28 UTC 之后）</h3><p>官方文章在 “The outage” 一节里，展示了一张 5xx 错误量曲线图：原本很低的错误率在 11 点多突然抬升，并出现一段时间的反复波动。</p>
-<p>在文章末尾的时间线表中，<strong>11:28</strong> 被标记为：</p>
-<blockquote>
-<p>Impact starts. Deployment reaches customer environments, first errors observed on customer HTTP traffic.</p>
-</blockquote>
-<p>对外部用户来说，这一阶段的直接表现就是：</p>
-<ul>
-<li>大量站点返回 Cloudflare 自己的 5xx 错误页；</li>
-<li>Workers KV、Access、Dashboard、Turnstile 等依赖核心代理（Cloudflare 文中称为 core proxy，并用 FL/FL2 指代其不同代际/版本的核心代理组件）的服务出现错误或不可用；</li>
-<li>整体 HTTP 流量表现为“时好时坏”的波动。</li>
-</ul>
-<p>波动的原因在官方报告里也解释得比较清楚：</p>
-<ul>
-<li>feature file 每几分钟重新生成一次并分发到全网；</li>
-<li>ClickHouse 集群在逐步更新，只有已经应用访问控制变更的节点会生成“坏文件”；</li>
-<li>每一轮刷新，有可能生成“好配置”或“坏配置”，然后快速推送，导致系统在“好文件 / 坏文件”之间反复切换。</li>
-</ul>
-<h3 id="2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）"><a href="#2-3-定位过程：收敛到数据库-权限策略与-Bot-Management-特征文件（11-28–14-30-UTC）" class="headerlink" title="2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）"></a>2.3 定位过程：收敛到数据库 / 权限策略与 Bot Management 特征文件（11:28–14:30 UTC）</h3><p>时间线显示，<strong>11:32–13:05</strong> 这段时间里，团队最初是沿着 <strong>Workers KV 错误和高流量</strong> 的症状在排查：</p>
-<blockquote>
-<p>“The team investigated elevated traffic levels and errors to Workers KV service… mitigations such as traffic manipulation and account limiting were attempted…”</p>
-</blockquote>
-<p>随着排障推进，Cloudflare 在 “The query behaviour change” 与 “Memory preallocation” 两节中，把技术链路写得很直白：</p>
-<ol>
-<li><strong>数据库层</strong>：访问控制变更后，查询时多返回了数据，响应行数接近翻倍；</li>
-<li><strong>配置生成层</strong>：用这条查询生成的 Bot Management feature file 跟着“变胖”，特征数量远超平时（文中描述为 “effectively more than doubling the rows in the response ultimately affecting the number of rows (i.e. features) in the final file output”）；</li>
-<li><strong>核心代理层</strong>：core proxy 上的 Bot Management 模块，为了预分配内存和防止无界增长，对特征数量设了一个硬上限（200，正常使用约 60）；</li>
-<li>当超大 feature file 触发这个上限时，核心组件 FL2 的 Rust 代码在检查时调用了 <code>unwrap()</code>，在 Err 分支 panic：<blockquote>
-<p>thread fl2_worker_thread panicked: called Result::unwrap() on an Err value</p>
-</blockquote>
-</li>
-</ol>
-<p>时间线中，<strong>13:37</strong> 这一行直接写道：</p>
-<blockquote>
-<p>Work focused on rollback of the Bot Management configuration file to a last-known-good version. We were confident that the Bot Management configuration file was the trigger for the incident.</p>
-</blockquote>
-<p>也就是说，到 13:37 前后，团队已经把问题清楚地收敛到这一链路上：</p>
-<blockquote>
-<p>数据库访问控制变更 → 查询行为变化 → feature file 异常膨胀 → Bot Management 模块触发 unwrap() panic → 核心代理返回大规模 5xx。</p>
-</blockquote>
-<h3 id="2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）"><a href="#2-4-处置与恢复：回滚配置与重启服务（13-05–17-06-UTC）" class="headerlink" title="2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）"></a>2.4 处置与恢复：回滚配置与重启服务（13:05–17:06 UTC）</h3><p>后续的处置流程在官方时间线里也有完整记录，可以粗略分成三段：</p>
-<ol>
-<li><strong>先压住影响面（13:05 起）</strong><ul>
-<li><strong>13:05</strong>：<blockquote>
-<p>Workers KV and Cloudflare Access bypass implemented — impact reduced.</p>
-</blockquote>
-</li>
-<li>做法是通过内部 bypass，让 Workers KV 和 Access 回退到 core proxy 的旧版本，虽然旧版本同样存在问题，但影响范围和程度都更小，因此整体错误率明显下降。</li>
-</ul>
-</li>
-<li><strong>修配置文件，恢复核心流量（13:37–14:30）</strong><ul>
-<li><strong>13:37</strong>：工作重点转向回滚 Bot Management 配置文件到 last-known-good 版本；</li>
-<li><strong>14:24</strong>：<ul>
-<li>停止生成与分发新的 Bot Management 配置文件；</li>
-<li>使用旧版本配置文件的恢复测试完成；</li>
-</ul>
-</li>
-<li><strong>14:30</strong>：<blockquote>
-<p>Main impact resolved. A correct Bot Management configuration file was deployed globally and most services started operating correctly.</p>
-</blockquote>
-</li>
-</ul>
-</li>
-<li><strong>清理长尾，全部恢复（14:30–17:06）</strong><ul>
-<li>核心流量恢复后，剩下的是重启在事故中进入 bad state 的下游服务；</li>
-<li><strong>17:06</strong> ：<blockquote>
-<p>All services resolved. Impact ends. All downstream services restarted and all operations fully restored.</p>
-</blockquote>
-</li>
-</ul>
-</li>
-</ol>
-<p>到这里为止，官方技术报告给出的“工程师视角故事线”就完整了：</p>
-<ul>
-<li>11:05 的数据库访问控制变更改变了系统表查询行为；</li>
-<li>被用于生成 Bot Management 特征配置文件的查询没有过滤 database，导致配置文件异常膨胀；</li>
-<li>核心代理中的 Bot Management 模块在遇到这份“超大配置”时触发 <code>unwrap()</code> panic，引发大规模 5xx；</li>
-<li>通过 bypass 降低影响面、回滚 / 修复配置文件、重启下游服务，在 14:30 解除主体影响，17:06 完成收尾。</li>
-</ul>
-<hr>
-<p>到这里为止，我只是把 Cloudflare 在官方复盘里公开的内容，整理成了一条相对清晰的时间线和技术链路。换句话说：前面的所有事实，都是从那篇博客和时间线表里来的，我并没有也不可能掌握他们内部更多的细节。</p>
-<p>接下来如果从变更和稳定性体系的角度往下展开，就难免会带一点推断和类比。这些推断<strong>有可能和 Cloudflare 内部当时的真实情况并不完全一致</strong>，也不代表我在评价或还原他们的具体决策过程，更谈不上指责。</p>
-<p>更合适的理解是：把这次事故当成一个公开、细节足够丰富的案例，把官方给出的时间线和技术原因当作“题面”，后面的分析只是借这道题来反思我们自己在变更、稳定性上的潜在问题，看看能从中抽象出哪些对自己有用的经验教训。后文更关注机制与流程如何把风险收住，而不是复盘某个具体个人/团队的对错。</p>
-<h2 id="3-从变更视角看这次故障"><a href="#3-从变更视角看这次故障" class="headerlink" title="3. 从变更视角看这次故障"></a>3. 从变更视角看这次故障</h2><p>大家都在讨论 <code>unwrap</code>、错误处理不健壮，但真正把这一串问题引爆的，是一类我们日常也经常做的事情——<strong>改了一条权限 / 策略 / 配置</strong>。</p>
-<p>这类操作在任何公司都很常见：收紧一下权限、加一条安全规则、改一条控制面配置。平时我们可能把它归类成“小变更”。这次事故对我们来说，也是一个“复盘”自查的机会，可以就把它当成一次典型的<strong>高危配置 / 安全策略变更事故</strong>，按变更的几个阶段回头看看：如果同样的事发生在我们系统里，哪些环节我们自己也容易掉链子。</p>
-<p>下面这些都是站在“做事的人”的角度做的“复盘”与自查，不是去评价 Cloudflare 做得好不好。</p>
-<h3 id="3-1-影响面评估：这次变更到底多“高危”"><a href="#3-1-影响面评估：这次变更到底多“高危”" class="headerlink" title="3.1 影响面评估：这次变更到底多“高危”"></a>3.1 影响面评估：这次变更到底多“高危”</h3><p>先看第一步：这次到底改了个什么东西。</p>
-<p>这一类权限 / 策略变更，在日常开发里，很容易被当成“就改一下配置”——不改代码、不发新版本，只是调整一条规则，看起来像是低风险操作。</p>
-<p>评估风险大小至少可以拆成两个维度：</p>
-<ol>
-<li><strong>所处平面和作用域（它在哪一层）</strong><ul>
-<li>是某个单体服务的本地配置，只影响局部行为；</li>
-<li>还是控制面 / 安全面上的全局策略，例如：认证授权、集中配置、路由 / 流量调度这类“公共基础设施”。</li>
-</ul>
-</li>
-<li><strong>依赖关系和影响链路（后面连着谁）</strong><ul>
-<li>有多少关键服务 / 关键路径依赖这条配置 / 策略才能继续往下走；</li>
-<li>它是不是在多条核心链路上的必经节点，是典型的 critical path / chokepoint 还是一个 leaf node。</li>
-</ul>
-</li>
-</ol>
-<p>Cloudflare 这次动的是核心组件访问数据的权限，从复盘描述看，很难把它归类成一个“局部、低影响的本地配置”。在任何一个复杂系统里，这种“全局共享 + 被关键链路反复访问”的配置，按理都应该直接归到高危变更的范畴。</p>
-<p>现实里又有另一个情况：历史系统经过多年演化，上下游依赖关系复杂。但我觉得这时候，仍然有必要做一些自查，多思考几个问题，比如：</p>
-<ul>
-<li>如果这个配置完全失效，用户侧最直观的症状会是什么，最坏情况下，它会导致什么样的影响？</li>
-<li>有哪些关键服务 / 功能一定要依赖这条配置？</li>
-<li>过去的故障 / 变更记录里，有没有跟它相关的坑？</li>
-</ul>
-<p>如果这些问题都答不出一个相对有把握的结论，并不代表这个变更风险就低，反而说明：</p>
-<p>我们现在对它的影响面认知还不够清晰，这种情况下，把它当成“小配置改动”随手上生产，其实是比较危险的。</p>
-<h3 id="3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍"><a href="#3-2-事前验证：先在可控环境里把“正常”和“异常”都走一遍" class="headerlink" title="3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍"></a>3.2 事前验证：先在可控环境里把“正常”和“异常”都走一遍</h3><p>如果可以在一个安全的测试环境里先行验证，有可能先暴露这个问题。</p>
-<p>有些人平时做配置 / 策略变更，习惯往往是很简单的：</p>
-<p>改完之后在控制台点两下、跑一跑页面，发现“看起来还能用”，然后就上生产了。</p>
-<p>如果事先没认真在测试环境里验证一遍，直接上生产环境变更就等于是给未知行为兜底。</p>
-<p>对这类高危变更：</p>
-<ul>
-<li>上生产之前，先在测试 / 预发环境完成测试，如果是阻断策略，也可以通过日志观察比对验证；</li>
-<li>在这个过程中，不需要穷举所有异常，但至少要有意识地想一想、看一看：<ul>
-<li>配置 / 策略拿不到、读错了、大致会长成什么样；</li>
-<li>系统在这种情况下，是还能撑住，还是直接炸掉。</li>
-</ul>
-</li>
-</ul>
-<p>大规模系统里，确实不可能在测试环境推演所有坏情况，这个目标本身就不现实。</p>
-<p>但在上生产之前，至少要做一件事：<strong>不要把“配置 / 策略永远没问题”当成默认前提</strong>，而是先在一个相对安全的环境里，确认一下最基本的正常和异常场景，是否符合预期。</p>
-<h3 id="3-3-灰度：别一上来就全网生效"><a href="#3-3-灰度：别一上来就全网生效" class="headerlink" title="3.3 灰度：别一上来就全网生效"></a>3.3 灰度：别一上来就全网生效</h3><p>即使测试 / 预发环境都跑过了，生产一定会面临更复杂的情况：真实数据、边缘场景、奇怪的调用链、历史遗留配置，都会叠加进来。所以有计划的分批次灰度发布非常重要。几种比较常见、也比较实用的手法：</p>
-<ul>
-<li><strong>按范围灰度</strong><ul>
-<li>按 Region / 机房 / 用户群 / 业务线分批；</li>
-<li>第一批尽量选影响范围小、可观测性好的对象。</li>
-</ul>
-</li>
-<li><strong>先监控，再执行</strong><ul>
-<li>安全策略先以 log-only / monitor-only 的方式 dry run 跑一段时间：<ul>
-<li>记录“如果现在真执行，会拦掉哪些请求”；</li>
-<li>统计“会放过哪些我们不希望放过的请求”；</li>
-</ul>
-</li>
-<li>没有明显问题，再切到 enforce 模式。</li>
-</ul>
-</li>
-<li><strong>做好灰度计划</strong><ul>
-<li>提前定好：灰度的批次，达到什么要求，我们就可以往下放一批；</li>
-</ul>
-</li>
-</ul>
-<p>其实很多时候问题不是“没做灰度”，而是这类配置 / 策略从设计第一天起，就没有灰度控制的能力。当然，如果某条配置一上来就只能全局生效，而且它又处在核心链路，那它本身就是一个需要去解决的技术债。</p>
-<h3 id="3-4-观测能力与跨部门协同：让影响可见可止血"><a href="#3-4-观测能力与跨部门协同：让影响可见可止血" class="headerlink" title="3.4 观测能力与跨部门协同：让影响可见可止血"></a>3.4 观测能力与跨部门协同：让影响可见可止血</h3><p>出问题这件事本身很难完全避免，那接下来就看两件事：</p>
-<ol>
-<li>出了问题，能不能被及时观测到，并且尽快把异常与本次变更关联起来；</li>
-<li>能不能快速拉齐相关方，迅速止血。</li>
-</ol>
-<p><strong>变更发起者（变更 owner）需要对此负责</strong>，对高危配置 / 策略变更来说，变更 owner 的责任不只是“把变更改对”，而是要在发起变更之前，就把下面两点想清楚、准备好，并落在 SOP 中：</p>
-<ul>
-<li>如何判断这次变更是否按预期生效、有没有带来额外副作用；</li>
-<li>一旦出现异常，应该如何处置，触发什么条件需要回滚或熔断。</li>
-</ul>
-<h3 id="3-4-1-观测：变更-owner-要先把观测指标定好"><a href="#3-4-1-观测：变更-owner-要先把观测指标定好" class="headerlink" title="3.4.1 观测：变更 owner 要先把观测指标定好"></a>3.4.1 观测：变更 owner 要先把观测指标定好</h3><p>业务侧的观测一般比较完备。但变更的 owner 并不一定有如同业务一样完备的观测能力和视角。<strong>变更 owner 需要在变更执行前，把与本次变更直接相关的观测能力先对齐好</strong>。对于 SRE、安全这类跨多方的变更，这个过程往往离不开跨部门协同。</p>
-<p>可以具体拆成几件事：</p>
-<ol>
-<li><strong>先列清楚：这次变更可能影响哪些链路、哪些指标</strong><ul>
-<li>我改的是一条安全策略 / 配置规则，它会作用在：<ul>
-<li>哪些入口（网关、CDN、API 网关…）；</li>
-<li>哪些下游（认证、业务服务、数据库 / 缓存…）；</li>
-<li>哪些用户 / 租户 / 区域。</li>
-</ul>
-</li>
-<li>对每一类影响，预先想一遍：<ul>
-<li>正常情况下，哪些指标会有轻微波动（例如某类请求被拒绝率小幅上升）；</li>
-<li>异常情况下，哪些指标会率先发生明显异常（例如某几个接口 5xx 暴涨）。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>与上下游一起梳理异常观测指标和告警信号</strong><ul>
-<li>在发起变更前，变更 owner 主动与相关方对齐两类信息：<ul>
-<li>各方现有的关键观测指标和告警规则：出现异常时优先关注哪些 dashboard / 告警；</li>
-<li>在变更相关的日志 / 指标里，是否需要增加哪些字段，以便后续快速按维度筛查。</li>
-</ul>
-</li>
-<li>理想的状态是：<ul>
-<li>在变更 owner 自己的 dashboard 里，可以看到这次变更涉及的上下游关键指标；</li>
-<li>所有人都清楚“这次变更要重点盯哪几个指标、哪些异常信号一出现就需要进入处置流程”。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>在监控 / 日志里给变更本身留“痕迹”</strong><ul>
-<li>相应的变更系统，至少要做到：<ul>
-<li>能够区分不同的配置 / 策略版本；</li>
-<li>能够在日志或查询里，把“使用新配置 / 新策略”的请求、租户、区域筛选出来。</li>
-</ul>
-</li>
-</ul>
-</li>
-</ol>
-<p>回到这次故障上，本身系统的观测也是有一定问题的，<code>unwrap</code> 导致panic级别的问题应该被捕获并且告警。但如果变更 owner 可以多想多做几步，或许能够更快速地把故障指征归因到他的变更上。</p>
-<h3 id="3-4-2-响应协同：以快速止血为目标"><a href="#3-4-2-响应协同：以快速止血为目标" class="headerlink" title="3.4.2 响应协同：以快速止血为目标"></a>3.4.2 响应协同：以快速止血为目标</h3><p>这次 Cloudflare 故障，从业务异常到定位到特定权限 / 特征文件变更导致的问题，过程拉得很长，很可能的原因是，变更信息没有在上下游充分同步，处置现场一开始也没有足够意识到“这波异常和哪一次变更高度相关”。</p>
-<p>从变更 owner 的视角，可以关注以下几点：</p>
-<ol>
-<li><strong>变更的“共同上下文”要统一</strong><ul>
-<li>每一次高危变更都要有明确的变更 ID / 版本号 / 影响范围（租户、区域、实例批次等），确保上下游知晓；</li>
-</ul>
-</li>
-<li><strong>定义好 SOP，关键指标要提前对齐好</strong><ul>
-<li>结合上文对齐好的观测指标，提前约定好异常指标出现后的处置动作。</li>
-<li>快速恢复动作尽量简单：先按预案降级或回滚，优先保障可用性，安全 / 合规问题通过后续补偿措施兜底。</li>
-</ul>
-</li>
-<li><strong>降级/熔断设计</strong> <ul>
-<li>临时关闭某个依赖路径，不再调用这条有问题的链路；</li>
-<li>将某些策略从“强制阻断”降级为“仅记录 + 限流”；</li>
-<li>对下游返回一个可预期的降级结果，而不是继续把异常往更深的地方传。</li>
-</ul>
-</li>
-<li><strong>恢复链路尽量简单，避免循环依赖</strong><ul>
-<li>典型的循环依赖场景：<ul>
-<li>回滚配置要通过同一套控制面 / 配置系统下发，而这套控制面此刻就因为这次变更不可用；</li>
-<li>执行回滚需要某些权限 / 认证链路，碰巧这次改的就是这层；</li>
-<li>回滚脚本依赖的一些后端服务也在故障链路里，导致脚本半路就跑挂了。</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>通过演练把这一套联动跑顺</strong><ul>
-<li>围绕典型高危变更，进行演练。演练不只是看“回滚脚本能不能跑通”。而是验证 SOP 中的观测指标能否与故障场景关联，并及时发起恢复操作。</li>
-<li>演练暴露出来的缺口，都应该复盘更新到 SOP 里。</li>
-</ul>
-</li>
-</ol>
-<h2 id="4-写在最后"><a href="#4-写在最后" class="headerlink" title="4. 写在最后"></a>4. 写在最后</h2><p>首先要给 Cloudflare 点个赞：愿意把问题摊开、把细节讲清楚，是一种非常好的文化。对我们这些旁观者来说，这样的复盘既能照出问题，也能当作一次很好的演练材料。</p>
-<p>在这种上下游链路极其复杂的系统里，一条变更真正会影响什么，很难提前预判。跨部门变更管理、观测、响应尤为重要。这类跨域风险，往往需要横向团队做中枢。</p>
-<p>尤其是对偏上游的同学来说，比如安全运营、策略平台，日常做的很多事情看上去只是“调一条规则”“收紧一点权限”，但站在全局视角，往往就是高风险动作。不要把配置、权限、策略当成理所当然“安全”的东西。如何在团队里把风险意识、影响面判断、事前预案这些东西沉淀成可复制的能力，而不是只靠少数人的经验，需要长期系统性地建设。</p>
-
-                    
-                        
-
-
-                    
-                    
-                        <p>
-                            <a
-                                href="/uncategorized/cong-biangeng-jiaodu-fupan-cloudflare-11-18-guzhang-0ctf2015-writeup/#post-footer"
-                                class="postShorten-excerpt_link link"
-                                aria-label=""
-                            >
-                                Comment and share
-                            </a>
-                        </p>
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-bottom">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
                             href="/writeups/0ctf-2018-zerofs-writeup/"
                             aria-label=": 0CTF2018 zerofs Writeup"
                         >
@@ -1643,6 +1332,67 @@ Full RELRO Canary found NX enabled PIE enabled No RPATH No RUNPATH login
         
     </article>
     
+    
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/writeups/2nd-360ctf-reverse5-writeup/"
+                            aria-label=": 第二届360信息技术大赛逆向第五题writeup"
+                        >
+                            第二届360信息技术大赛逆向第五题writeup
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2014-07-03T23:28:53+08:00">
+	
+		    Jul 03, 2014
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/writeups/">writeups</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <h2 id="题目说明"><a href="#题目说明" class="headerlink" title="题目说明"></a>题目说明</h2><p>本道题目中的MFC_ASM.exe是一个有漏洞的可执行程序：它会去读取服务器上的一段包含shellcode的文件Exploit.html。 但是，该Exploit.html文件的shellcode并不能直接执行。分析MFC_ASM.exe引发漏洞的代码片段，并修改 Exploit.html文件中的shellcode布局，以便让MFC_ASM.exe正常执行，以便得到KEY。 先搭建该EXE的执行环境： 1、在本地安装appserv[如果不知道appserv是啥，请自行so.com一下]，配置HTTP端口为80 2、将您修改后的Exploit.html以及压缩包中的shell.dat复制到www目录下 3、运行MFC_ASM.exe，如果您成功修复了该Exploit.html，会弹出key，否则，崩溃</p>
+<h2 id="MFC-ASM-EXE分析"><a href="#MFC-ASM-EXE分析" class="headerlink" title="MFC_ASM.EXE分析"></a>MFC_ASM.EXE分析</h2><p>（先吐槽下那个网站上的题解根本就是抄题目加放KEY啊- -） 逆向一下可以找到溢出的函数，MFC_ASM.EXE就是上网页把exploit.html下下来，同时栈溢出了。。 这样分析应该是MFC_ASM.EXE从exploit.html下载信息导致溢出，之后触发shellcode然后对shell.bat进行操作，之后导致弹窗。 <img src="data:image/png;base64,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" alt> 原先使用时 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABIcAAADECAIAAACKkNYdAAAgAElEQVR4nO1dO47lOrLU0no7s4tayhizkDGveYF3rXHHHDxg/GfoGYUS1GJmMDL5kXQYQqChpshgZiSVJ9msrrP9z7/+9+9///vf/va3r6+vr6+v/f/+KwiCIAhrQh+FgiAIwgR8f9z8+9//3vf9X//613/+859NuzJBEARB+IY+CgVBEIQJ0K5MEARBEFzoo1AQBEGYAO3KBEEQBMGFPgoFQRCECUC7sk2XLl26dOnSpetJ15cuXbp0fe6lXZkuXbp06dKl6wXX3SWTLl26dA280K7s9uO8QUeEt9vwZPzzn/+83YYnQ/pInxZ4+eeSb6vpN9rf7INH8f2BMd/3z/800efCfPz15x9V7NsmCEII//jjv8ITwKS4A79+/dKuTDCgqlr6SJ9xmLwrC51CJPpXjTnuH/6Bos+F+fjrzz/26rVt+75/fX39+vUrtDjfdX19fd1eQc7Eav7OhHZlzwGV4vb9SHHalQkGVFVLH+kzDvyu7Hy19y+HmC25/qUx5f3DP1D0uTAf3yVL9azsrz//0K7sw7CavzOhXdlzwKS4bzTtys4//si079avsTI7M8yJIaUxl5ZLfqy2e/gMnrKq9jqHjPkYHqwPkDptT0fvoiQJlbxdWfeoefpH/WLiWPWI15nZlZUSdenvXaR3oP/RWHbjIxJFKNxVaFc2Hx13ZWdaph2s2Et7aXZoCGlnaJdyLm+q7WX51IWnyg/m/Yd2ZSOhXdlzMGNXdt7nMPf7aYPEk4D+jcbs/q6Mv/fwGTzerqPs7LVX7Xk1D9CH1D9qT6/QR0nIZXOhMndlCR7GpDRJlScK3qlL/tl+v/baFivaf3R7ac/RZyuunLZ8BFtgfsQIQ9FrV/bNxt+fl02IhJm3Oqn5iN+llDsf/r4XT5TffHp7xfyp0K7sOZi6K7vstcz2r9+vkiRxbxoTGltSRTO7h8/gwbuO9/o1Rx+GP2rP+a/bz0VSnftH7QHzAnvwroznqUqU1pnhCcELlslpprL9tJM5q3G+2vt7F3CK7H9pvNiWkDQquxmCLnERxqH7ruxgBu0XG0oScM/MC8Z6dm7alQn9oF3Zc/C4XVk5ChCS9+XY87zV6XbtyrQrG6kPwx+15/zX7eciqc79mYEMD7Zn3K5s+/1q1Bnz5FRiHuFd2eW+vEn3H4pLEC+rbpA9Xtyr9+Zi065sPsySZdu2obuychQgJLud+cFYYE90V/bdP7rj8vow/NqVvQXalT0HTIq74ScYzRazHROe92CXIYDHnPTSYqZa0O7hM3i0K8M81f9XVuWP2tOLihnYLtG4n2DEA0v9R/NUzTYfgV3Z2RLvJtF/4672/ucW88++OCY17QHxNdm0K5uPsmQ5YjT6JxjNFma1VOcFk4JHoV3KuezxHpmdy3aeH/Pw7cfT2yvmT4V2Zc8Bk+L67Mq+nOOpsv381KTyWrx7s/95dtD/eGrmWf7ew2fwaFfWoo/56Lhy9px5Qq5d+jMDGR5sD9iVhXjmx52MKdnTazdTUxlu7ybX32zp1X6O4LlP+WdfbKfLa+fXBvjIEAbhUrJcohbdle3OpqhsL1cFaDS7kfNexgJ7+F3KscnxNjz/6HFWVvJ34Ty33F4xfyq0K3sOmBT3lF1ZdZ8W2pWFxmpXhnm0K2vRpzpRwp7jr1u/XVnIJG+4ac9Su7LE8Ev+Obt/bgQ3of5lCMoLhx73vxhz/iswpgu8lZOLqXZl83EuWcyVNnlXVrZ4jS38Zv/Erixx34tHu7InQ7uy54BJcY/4CcbqLivaP2rMhafMofjew2fw6HcwYp7orow0Bs/bJfRREjAEUN31E4yN4jSGjB/uVf/nGHlXe39v3nT7YYZnVdnnrJKnHtPuxdHTPxcXYRxu/B2MZUvZAbdjfnMU6P8Bu7LQVk27snHQruw5mPHbPvYe31f2VVw8M6Dijbm0mKkTtHv4DB59XxnmyX1fWYs9Hb2LkiRUGvp9ZVWnbhGHXw8799s+zi2eMYn+3tXe/2g823D5c3Pi7s1bbT//lQkljqwXF2Eceu3KvKUF2i8rx1vVoJ1Z0rydoV3KubyptpflUxeeHMn56e0V86dCu7LnYNKu7O3Qpy+GV1UL0kf6tOPGXZnZCEpGvr9X45p9ngl9LsxHx13Z26/Vdimr+TsT2pU9B9qVUdCnL4aqaukjfcaB3JVttf0M2R/XgiZPqP9lRtDn4dDnwnxoV3Zcq+1SVvN3JrQrew60K6OgT18MVdXSR/qMQ5l/tmInU+be8infHyOa583+W3E4Zpaet4sfioswGt+1CL72bfu+0a7sk7CavzOhXdlzwKS449KuTLChqlr6SJ9xMPPP9vtmxhy4Wdswsj9ANM+b/bfXHpHhuAhD8Yu49m077qfuk+Zeq+1SVvN3JrQrew6YFHe+tCsTDKiqlj7SZxyUf54JxeUG7PvxEz7un9+/H3/fj18tfb/ZA7Da8lvN36n40HfklWBS3OlP7coEA6qqpY/0GQfln2dCcZkPplLZt+24V1nyMVjN36n40HfkjQhtyfZ9165MMKCqWvpIn3FQ/nkmFJcboLOyH6y2/Fbzdyo+9B15Jeaclf32P3GJ9uNRtTPDnBhSGmP6dfyEd9lSPgIYx3OhCpHwPOBbgAfZ010fZnha5+r3cbXoM1rqCTxDv6+sF4/XrSVeJklJ1V6OACN7iWwK1Z18EHKWqEycj45nZXPKki6VjGc/KRppD9M/6m9IhF7+CmE8Iw8L+5yzsvNrxtzvfpoA96B/ozF7bVeGWxjM4WE4vf6Yx/uW5ChPzp4WfXJUUZ3xrqMlXpOlHsQDdvXP9KslXtW4l+hVjvDrLedX1Lso8zjkLFGZeAM6nZXNKUvIeauTelSkaIDEfNpSPnURudFfIYxn5GFh/78pZ2WX1OOlpMt9Iv0NShO7/zvQcJVGYhrPuBL2FbuyamlIciZ0ru460vEq7S+HX9ofyIP1eaZf7fGqNh4o88/2++U9qs7C+BLyC5hESnELgCVAT5WJ88GelQmCEMLdr7bwjalnZcyurBwFCMn76Fhz1KXFK0GidcbTeEpOph3/v6BeNVmiUqzqszvVdl+dvV1rl3hd7C8lMr1+FM9n7Mr4YJUzYh4v//D3zCze05A4oXmj6o0DY2HZR7uyGxD8h2QvstPKEmZeMNbsczwiRcPlUOkpLod4f0kfgT45fwXhxZh5Vkbeey1mOybE6YZME3u8KiLrvGk80WXhzeu1h/7fVM6wS/9e+pz/ylDldM6dJSaUaaG9keddP8HYEi9swHFdRkXzj2ebZ603L+9gy7y8euPAWFj2UZk4H9F/SPYiO6EsKcsPjx9M2mWXkiuHTPvPT3l/wbyeki3+CsJ7Me+szMs+4A300oHX4t179pD992xVxIAZGyoZG+1h5i3bo2dlLSr11TmqVW7shF3Z5mwYyvYH8uDfFvMEv3rFK8cTzT/nyxuFbYt6h33xeKLqjQNjYdlHZeIN6HpWNqEsic7LlzS55RctmZj2ah+y3BrhryC8DNPOytrTXzUhMq+9xxZNB6OrNK9PlCdqW46H33U0StSFpLy/XDfqk1hLZ7NN10Khv4XnLbuyy5WIl9cfj+2Vf8qnYCzjDsMDqEJTDAVjYdlHZeJ89D0rm1CWkPOaA7+s6/w0IWC0ZGL69xo7wl9BeBce+jsYy5bqa0/2Z6Yzn14YclVRiepYkpCxp1fVWPKMOwvqVc8xNjxNn1eEvgvPK36CMUTYd2yv/FM+beE5d8BjPTbcXj4a185YWPZRmXgDev+/MvLebGF2I+S8eJRnTFQ9MKM5O9mf0aFlbNpfQXgf3vJ9ZV/FxTN7VKSRu5MOttNlNuLKhuchY+kNiVIlePjvK4vq4/XvpXPZ4V59Xhf6Ljyv+L4yb510MQYPL/PPuT9jz1Zc6f7np55fW+09TfAPbQf2eEaacRFGo9dZ2T6rLCH5vRm9qffI8qt6BPzi+/cSud1fQXgvZpyVfQCUDjDw/ysTpI/0aYHyzzOhuNyATmdlH4DVlt9q/gqLYs5Z2duhdIChqlr6SJ9xUP55JhSX+eh4VvZ2rLb8VvNXWBM6K6OgdIChqlr6SJ9xUP55JhSXG6Czsh+stvxW81dYFDorY6B0gKGqWvpIn3FQ/nkmFJf50FnZgdWW32r+CmtCZ2UUlA4wVFVLH+kzDso/z4TicgN0VvaD1Zbfav4Ki0JnZQyUDjBUVUsf6TMOyj/PhOIyHzorO7Da8lvNX2FN6KyMgtIBhqpq6SN9xmF0/vng1D0U+ly4ATor+8Fqy281f4VF8ZbvK/M6M8zeU9LI3U8H3vfY7MFCx+SJfpxgS3rZY/JUv28qbc9WXN39Cqmds8f7FukufuGeOX3aQ8b7G1o/mCcRr4QyLfpU7TFJcuXImQrb5nmUmLQL0qFJk4cWVWNchBY86vvKvM5M+ZGoZEpjQtLx83r2V5XBPCF+U4rbl58gjMaMs7LyrcP3++nl5ElAf9Mekv9oMak8l6Of7qBQ4GNZJWkpXDAPrqrb7cFjGwuyRLyi9uCzoEa/QLeQX4wZDFu1T6/1E8VlbIiqKnIjJybJlSNpwxp1bsR2ukb4aHbLaaUy8QZ0OiubU5aQ8yaM2YPLLz2vSZLQgdTH5Ez4KwhvxYSzssub7KWGy/2g1z431qQCn+58VeHxnNuj1QZf7fH2YB6zqu5Y/ZSd+/oVilfCHrAr6+hXOTa3Di+jvPaQPTgKufUTQjkQ28nPG9UnEXeQfzy/vCC2kGA7Q/2j94yMvD1YH94elYnz0eusbFpZwszbsSzxkJ7XJOl4j61N+ysIL8XUs7JLUvPaL08BIXkfHWuOurR4VculQzUAgOdoCVHt8cqGsQdzVn9CDxvMG5bm6RWvnD3zd2UJvy48pRk4mi328OsnGiYwENuZCDepD094AJcj3prh1xIQx7sHzjL9223GfQCPOSTnr8rEG9D7rGx0WcLMi8uSss/xlNcNzIttYHzkfanqAzrodROWwMyzMvLeazHbq2ki1N+TqXxUrR6YkgLzXAoCnipa2TD2YE6vqm7Xp9q5XecJ9gz9CU+8Tni/cqEP2eMN59fP9vvVEi+sm9nZnLclZOQjXI60B453ilGe6d9uM+4DeIA9pbXYX5WJ89H9rIy891rMdq/88PjBpB7Pnt2Vmfek/VE7MQ/wyxP5rlUnCNMw76zMyz5l+/mpSeW1gJRRGnPJCF7/4+mlpVo9JOqzXtVJdCzpl1e47PFdWYtVOZ5e8crZw+/KsM5D/TrPWNKW7Ql7eH2qfqWjz/OTbCF9ch6ZqclcJ8x9iz6Ap2oPz1/yVC035zV5TNpoREBchLHoelY2oSyJzmuWJZf24ymvmzkv5i99qd6Dsorhr/a8Yb0JwmRMOysDaWjn3kzzXW1JAfzYkqpaeTAlBeApqwrM5vWv2tnFr1BVTSpT7R/i6RWvnD38/5uK2lNdJ1G/vGVTtkftCenDDAxJFNWNJwzpk3OHzz/MPTN1lGdE/6iY5FiwHkJBMeMijEbfs7IJZQk5rzkwWpYAmPOOKJlaSrKqdKNXlyDcjof+DsaypfpKR/tHjbnwVCsApqRgeHiqKmdLlYMZoj+BxvvSKG/3eOWGR3dlCZX6+tUlfJfOYOzQn4Ct9mxxKqFPwh0+/+QCxzvl8Yzo71nlLSrS35D+0bgIw3Hf72AsW8idBjNvdTqmLAEwqTA/sBBYzovJKJz2VxDeird8X9lXcfHMZJrAxpRObafLe8rEAPOEqMz+VX7SHkACdh3AGNIkUEUleHrFK2RPaFcWChZpWIgBhD5klRl6s2du/bTIEpWIWTykVYn1U80/nkRHu8dPtjNaAR5eUjzWFIfRoTq1Zyew34uLMBSP+r4ypiwh+fGMfFkCgOdlaqGqMlifhMIt/grCGzHjrOwDoHSAgb+PS5A+0qcFH5x/Xv2p8cFxeS46nZV9AFZbfqv5KyyKOWdlb4fSAYaqaukjfcbhU/PP2z8yPjUuT0bHs7K3Y7Xlt5q/wprQWRkFpQMMVdXSR/qMw4flH/Czhe/Ch8XlHdBZ2Q9WW36r+SssCp2VMVA6wFBVLX2kzzgo/zwTist86KzswGrLbzV/hTWhszIKSgcYqqqlj/QZB+WfZ0JxuQE6K/vBastvNX+FRaGzMgZKBxiqqqWP9BkH5Z9nQnGZD52VHVht+a3mr7AmdFZGQekAQ1W19JE+46D880woLjdAZ2U/WG35reavsCje8n1lXmeG+fzUbGSMMf3CX5LDfx6YnXMkuae8PWZ/r6qO8gAGLHXar2i8cvZ435Lc3S9T6nF+JXh6rR9eH7NnQuTR68fzd+9XjmALvadRlUagKhoZX35NMlCZOB+P+r4yr7NXfpBDeGNI0chyKG0Pyc/o38VfQXgvZpyVlW8pvt9PbyZPAvo3GrPXdmW4hQHmITlBN7JkxFSAAVfVPA9vVUKfjvGK2oPPghr9YoZXqbwOOZ3N/l3WT6/34mhsfC96rR/M1qUc2U4XL1Sjj70A4h7yiB/LQGXiDeh0VjanLCHn7VuW4Emj7TnbSDFJHaL+CsKLMeGs7PLKea/i5Z55h8l705jQWJMKV3s8qjzR6rMci6sx0gVQyJpVdYKHt6pFn8Z4JewBu7KOfl2i7LXngt4YLxx3fv2069POw+jWok8JkH88Hn5dbb9fuJ3k8exh5q3KVd7jqU1jLvcJ3by4CEPR66xsWlnCzNuxLMGTJtpHlFtRHaL+CsJ7MfWs7JLUvPbLU0BI3kfHmqMuLbjU4APAlCYk56XaaCHBJU75qPoTerydVe9y+vSKV84eflfWHvetKCLx6opqmNany/pJxMuc17vHJOPWj8f/DS//3Hh/MTWqbVQ3wAmoykdn+6Nro2RTmXgDep+VjS5LmHl7lSWgZ7UcYsZGecBYrLPJqddNWAIzz8rIe6/FbMeE5QuP2z2Zykf4k/tSsgDgT32eZ3cqDHOinD2A36uqozyMVX39isYLT+rxhH7CMx138h6QgHnb9emyfkJmgHmjnKPXD7Ynmn/aF0nV34728IqZswMq0Hn7fUlEdfDiIoxG97My8t5rMdu9MsPj5w24UJGiRcuhy1PS/RA/cBPYM3mxCcJ8zDsr87JP2X5+alJ5LUw6i/Y/nl5aolWIh14VTJWHNCxXneSqal6rFmX66sz0ZPTJ8YBum1Nclu0J71pWNaP/uF1Zr3XYy56cPu35ZyuunD5R/ssjbwivGJaO1/nClvNdZeIN6HpWNqEsic7bUpaAntVyiBnb0v8yFuvsqdp/OQnC0zDtrKw9/VVfXSZ9MP2ZdBCtWjy0VEIlj1cY8YZhGzz+aFUN7MQmJTzi9UxIRPJP+H9T27BdWWgs9qvX+uEN8+bN8aRj1Bj39vwT1bOFP+R4o/54ePnIG5vzXWXifPQ9K5tQlpDzmgOjZYkHphzy2keUWJ4OvfwVhPfiob+DsWyppoBo/6gxF55eVVpLJcRw4kbeHkwV+gnGFpOiY3l7eMLqcEafHE/ItdwSuvSM6swMaVk/vd6L476jyC36YM5c/hl9Hwp6aOz2czH6gKk95vKvVX5zFpWJ8/HXn3/w+PXrl7c85pQl/LzV6Vp2KVE7c+Jgj5hHvfwVhBfjLd9X9lVcPLPXP2RM6ZT5ac1UJwwPaCcJmcaQPYAK7DpCPFF3QhKBeIVE9joDqsTvqEyY1LKEGIaWeOEOofWT0Kect5fIjWaQfvH5h7HTfOQNubQDf3kS0H55ythvTr0VF/C9qr/ntcrE+fiuRZjr6+sL7Mr2WWUJyY9n5MsS4CnfHhWH6Uy61sVfQXgvZpyVfQCUDjDw93EJ0kf6tED555lQXObjKEeq+Krtyt6O1Zbfav4Ki2LOWdnboXSAoapa+kifcVD+eSYUl/nQruzAastvNX+FNaGzMgpKBxiqqqWP9BkH5Z9nQnGZD+3KDqy2/FbzV1gUOitjoHSAoapa+kifcVD+eSYUl/nQruzAastvNX+FNaGzMgpKBxiqqqWP9BkH5Z9nQnGZD+3KDqy2/FbzV1gUOitjoHSAoapa+kifcVD+eSYUl/nQruzAastvNX+FNaGzMgpKBxiqqqWP9BkH5Z9nQnGZD+3KDqy2/FbzV1gUb/m+Mq8zw5wYUhpj+lV+v433PTkA4Btyop8oXeyp8pT9vaq63R7QPyFyOw8e4rV735I8wS9+8Zjx6mgPMOn566eXPZ4ImIEvR0zzQmtgDqKLBHdOhLKLnioT56PjrmxOWcLzmzPi/rxuwB2+TPL69+Kpin/78hOE0ZhxVla+vfh+P72ZPAno32jMXtuV4ZYqQBUSJexiD+YxCXFV3W5POda7n8DDDL9QebsynjwRtS5LMWoP6LOdrsujt6yfLvaYQ45G8ylfjrSvgTkA+leXUEjYjnaWf1WZOB+9dmVzypLovGbtAezhdTNNaimTmImYse1lmCB8FCaclR1v1yXpmO1fv18lSeLeNCY01qTC1RUPsyBLVI3d7fEayw5mVd3LHnNgQp9ePJd4lcMv7aY+3ly9/CrtGRF3kqTK84r108seMy7YHpB/TL/A+vT640dV3aJ64rHm1FXmFvsTenpxEYai+65sdFnCzAvGenbu2V1ZrzIJz0KODfXX6yasgKlnZZe0AtLNzuU18p6hxemmfIRLmVAMLp/6JQ9f5bTbw/CUnNWf0GvRpzowxBnyi4lXObz0mt+V9fKrtKc97i1hevv66WiPGResj5d/wP1lihH9eftD6yEXKUDSYr+njxcXYTRu2ZWVowAh2e3MD8YCe0LLj5nr0pnv7+nj8UT1TPgrCG/FzLMy8t5rMdsxoZnIGNry6aUFf4pfPvIx+EqIIWm0J1SpHMC7jkZ9sAKNPFGdcxLxu45efu3Oumpxirek9Ovt66ejPWZcsD7R/LMP3pWVnmL7+XWSCxYmabHf08eLizAaN/4Eo9litnvlh8cPJsWPeN3AXMBO3i9PnGj/85CyfeZKE4RbMO+sDGSEnU5/uBvIX5gWtB9PLy1MFcJXJ/x9lGeOPdGqGtvAWx5lAwWZV655JGWV5rWb+mCr2v3qtX5y8fJ4PJ359ZNTqS9Diz4MT8np5Z9Sz/MKvPw10T8XC0YTc6LqcPMRaAT+RuNiWqsycT6OfxtmruqubEJZwsxbWl61c48sv9JBss/FHuAX1qH0K8c2Z40Jwp2YdlbWnv7Md9hLGaHUUx1bUkU/6T2U1QOuijBPL3v4+28M3ZW1uMP359lwmMzqLbQr6+KXt676xp03rNf6SYSsy/rpq0kZF8yJ8w9oN/nN/pduUX+jmoD+YHj5KBrcqP3YNpWJ8/EreHkRn1aWMPOC8gPYwy+/L+sCNkfLKkYH0y++f8hfQXgvHvo7GMsWLx2AhIX7R4258FSrEKY0YThJnl72VKsTk2f+rqwXT4KNce1CCHZluOxr9IvnTDgVsgrzJHZlvDFd1k/H9Yw5TUKcfxjZq/0v3aL+4j7bz8X0B5J6zGTQE/Zj21Qm3oDgPyR7EZ9TlpDzkruX8lFCwOp2KCQIT8tIFy3DBOED8ZbvK/sqLp4ZUPHGlE5tpws3kiirgRBPL3sSPOB36PElFyOLSU5yet0S8fLm9drx/ysb5FdU86hTCRLPnuj6CcXL7JzW2bSHXzlYE48tmn/4KRr7k+sE85RDSqoiXJX2Xvbjv6pMnI/oPySDiM8pSxh+775qZ0JAz05GHLMnfoRF4Pun/RWEd2HGWdkHQOkAA/+EniB9pE8LXpR/PvhToMSL4vI56HRW9gFYbfmt5q+wKOaclb0dSgcYqqqlj/QZh7fknw/+CDDxlrh8Ejqelb0dqy2/1fwV1oTOyigoHWCoqpY+0mccHp5/zJ/9WwEPj8tnQmdlP1ht+a3mr7AodFbGQOkAQ1W19JE+46D880woLvOhs7IDqy2/1fwV1oTOyigoHWCoqpY+0mcclH+eCcXlBuis7AerLb/V/BUWhc7KGCgdYKiqlj7SZxyUf54JxWU+dFZ2YLXlt5q/wprQWRkFpQMMVdXSR/qMw9vzz6d+NLw9Lq+Ezsp+sNryW81fYVG85fvKvM4M8/lpdUbvkekX/pIc/vMA8/DhbLcH9Ack+Pu42l3zhnTxy9QtqvNd+lR5EgqfB2LdQvoAq7xdWVRnQJJ7OsKeBM/zy5FyzTSK3MUefhF6/THP8+PyeXjU95V5nb3yg5m3OuP5UUg6voLqVT55IgB98BS3Lz9BGI0ZZ2XlW43v99ObyZOA/qYxJP/RYsrXWH8wPI0FTUuJ41VaJSc+6+B50sOrVLhDVCWs82R9PKvSoW+xAY/afq5LO96VNdoGunn28FQ5raI8zy9H2tcME68uVNvpIqf22p8flw9Ep7OyOWVJdF6z9gBUvG7VqomxP1o+pfnNPnrdhCUw4azs8iZ7qeFyP/m1T6SD0Oc6QJWnpfpMlziXgdgesOsI8WCGSy3ltfPi5CRKxGuoPl7niz7tcW/Xx4uUqU9CZ2xPOZZZOePs4XlA/jHjVX1UnTfqFx5bMjD9SXu8KUzLsV+ep167ysT56HVWNq0sYeYFY80+xyNet9C8vcqnXvwJfwXhpZh6VnZJal775SkgJO+jY81RlxZc+vABYHj4qqjdHmZg+ei9uzJPt77x4vUhHzGdL/rkeKLrp6qn2V79Cc+0PVUdOsa9RR/M4+UfcH9xmelf7UMum7I/aCGlYOwJzUv2x+0qE29A77Oy0WUJMy8Ya/Y5HvG6gXmrNlR9ZHii/ObTqStNEG7BzLMy8t5rMduraSLU35OpfIQrmLLU8MBUQi1VUdSe6ozmo2k/gZaWyNOhr84eD68P84jsfDTyVF68+PVT1ZNcP+lAA5N4e3JxjyrM80Tzzx7clWFZGB9xf7CuMFXIHn5evj9uV5k4H93Pysh7r8Vs98oPjx9MavY5HvG6MZVS1f6qnSEezG+6cNeqE4RpmHdW5mUfkDalrxAAAB8nSURBVHHKlxB3Aykj3f94emnJVQm4D3PfwsMj6lFo17H9fpHGbE5xWbaHvOulM/YruiuLRq3sn1sDuGejPqBx3K4sZw/P08sezOPln3K9Hffb7+9FdN6oj7g/04IfAX5TBzwv3x+3q0y8AV3PyiaUJcy8X8VV8piz8LqBeS9PgXfVe9J+Zi7z6Q3rTRAmY9pZWZnmvPbzU9xiEoLOZH8m/UUrGw9MtdSLh0TCHf7/BYXEOffcHr8rA40hfaIhA2ZcrlzcQ4b10oeJEW8P0IFUu689UR6cf8z248/LDWlzL7/4Fvwopxtu4a3y2lUmzkffs7IJZQkzLy5FLteZitctNK/ny4h7Zq6Ev4LwUjz0dzCWLdXXuGN/Jh1UqxamlAE8ZjnVwsMj4U50VxayKleQkd5FSXJVXe63WbTEK8GJuzWuQ8wzblfWS/Be9uR4cP4x248/LzekzbjP9nOZjYzIQKsqA+8LbuGt8tpVJt6A+34HY9nC7C6YeaM7lqOF1y03r+cvWT7xwpLiD1xXgvAQvOX7yr6Ki2dm+lcflU6ZVQgoTTxM4AmtCVAVeVYlzoJCVnnz8iqBnlGpq8aUQ6K7spBJ1W4tPFFxqkPMdqBPS9B5B7vEfRxPNP+Yf2X6k/bgdo+kNCYkkcnjtTPz8v09KVQmzsejvq+MKTMYfu8eTL3Hl59pD9/IKIP1Ab6QU9y48ARhDmaclX0AlA4w8PdxCdJH+rTgxvzzwVm9HfpcuAGdzso+AKstv9X8FRbFnLOyt0PpAENVtfSRPuNwV/754JTeBfpcmI+OZ2Vvx2rLbzV/hTWhszIKSgcYqqqlj/QZh8n5x/uBPeECfS7cAJ2V/WC15beav8Ki0FkZA6UDDFXV0kf6jIPyzzOhuMyHzsoOrLb8VvNXWBM6K6OgdIChqlr6SJ9xUP55JhSXG6Czsh+stvxW81dYFDorY6B0gKGqWvpIn3FQ/nkmFJf50FnZgdWW32r+CmtCZ2UUlA4wVFVLH+kzDvptH8+EPhdugM7KfrDa8lvNX2FRvOX7yrzODPP5qddeNcb0q/w/8fj7bTyYnRP/594bwlNh+z0Sr6pu9wvY05cnofB5INYtpE+LVS3rB/QcHS9eH6wzr08jT4vUZjdsz7hy5DyX51eCqtEerHCXiRL2zIyL4OFR31fmdQZlRnVe0sg99S3S2E7G/lB/YDxD1eKvILwUM87KyrcU3++nN5MnAf09YxgjjxZTvsY6huRJVHvMPWkJ8xRX1Y1+hRxMqJ0u8ngbeH3O7bxV3dcP/6hLvHLrJ2dJmqfL++X1wQPHlSMt71HIhfnxGmTJnLgILjqdlc0pS6LzkvxHCyla1NlomVTtbxpfDu/lryC8GBPOyi6vnPcqXu7J9NSSVrx2Mh0kqisTVZ5oVb39XLidN6b6yKyqe/lldu7FU+rTbk+7Pkykuuvs6ZBY0tF45dZPOuKNPJfoeO0hnfFAkH/KgaH149mAyXF/3IexE8/L2DNCHzIuwlD0OiubVpYw8+ZKGn75jSifWvpHdYj6KwjvxdSzsktS89ovTwEhec/Qgul2Kx2YJcger/Y8nrIPSbW3VY24+vEYyqqa0SekVbs+XueLPjkePJbXJxd0rHPUozJGzMppiVdu/fBmjNBnS71fWGdviJd/+HsmTGV/0EJKytgTmjcalI76MHERhqP3WdnosoSZF5cxZZ/jKSkaPxe2v6X90gfr3OivILwYM8/KyHuvxWyvpjOzv9fuyVQ+wp/0ZcnigamKGJ6qSd4UJgkuuUoSr6puNMZk4x+RnY/GFntw3Hl9on61a4t1mBOv6PrxdI7qw/OQsjBsQGfPnmj+SQTdHOu1mFOY7YxtoXkvjzx7+gaLj4swGt3Pysh7r8Vs98oMjx9M6vHsweWXKIf4MonpH33U6K8gvBTzzsq87FO2n5+aVF4LeM8xLWg/nl5a5lRFIc5z6VDSlu1p20qS0K4DFzpVSxLKgP652OGejfokgt7iC88zLl4JfUh7evHsp3Vr0pbtHe25K/8wLfgR4N9+v3Lz4vaS32tn9CmhMvEGdD0rm1CWMPN+FdeF59J+PCVF83h6lU9eH8CJdfZUnbrSBOEWTDsrK18//FqSma5XWsFjyyGjq6IE57nOMAuRqHm8PeN2HaBni9SlaL0Ktcn69Fo/ng5Rnly8VtuVlTpje+bnH74FP2LsbJm3VzujTwmVifPR96xsQlnCzMuUMS27lCh/rkwKcYZ0iPorCO/FQ38HY9lSTQHR/qSRR8ul/+iqKMHZkarsiUmiVXVIpWq118KT4MTdzKfP35VFOfvGa74+UZ4RUvP25PJPSbX9XGYjYwxwsMoQtZOZt1e7pw/urzLxBtz3OxjLlmiZ4fGnjSFFi/LnyiSgD1ayqkPUX0F4Md7yfWVfxcUze/3BFKUxpVNmNRMqywAPaB9KBXqCR+B36AFjQk4BcpKt2q2FB1sS0idkTJeg46mjPIl48foknOrF013qc3/MwOcfTIXbmXhhH6tSV9uj8wJ7uujj2QPiIgzFo76vLFFmmPzefdUYXrdqzVO253hIJaNUUX8F4aWYcVb2AVA6wPC+b0qQPtKnHco/z4TicgM6nZV9AFZbfqv5KyyKOWdlb4fSAYaqaukjfcZB+eeZUFzmo+NZ2dux2vJbzV9hTeisjILSAYaqaukjfcZB+eeZUFxugM7KfrDa8lvNX2FN/PXnHzx+/fqlXZlgQFW19JE+46D880woLvOhs7IDqy2/1fwV1sR34mKur68v7coEG6qqpY/0GQfln2dCcbkBOiv7wWrLbzV/hTVx5K4qtCu734zHQlW19JE+46D880woLvOhs7IDqy2/1fwV1oR2ZRSUDjBUVUsf6TMO0fzzwan4UdDnwg3QWdkPVlt+q/krrIlJu7LE11mQnRnm81OvvWrMpQV8jw34PhwPZv8QT9WeqCUhk7xvAR6nD7ZznM45e8bpM0jnFonMblF9esW9qg+pDONXlIr3q8uujIlLaJaHIGo/Iw7JpjJxPjqelc0pS3h+MCNZlnhIlEOMa95ELfp08VcQ3osZu7IyC+D7/fRm8iSgv2cMY+TRAkQ8O+7dY5Q9czxm/9Bw0BmYhM86RuuTVmaaPaP16cLDDGeoqn3KDnhX1h53c2zja3VpbHzL8PAu5Qi2v1Hbu9C4zr1Gkkpl4g3odFY2pyyJzkvyHy0JAVvsrNoTsj+qoV43YQVM3ZVdXlqz/ev3qyRJ3JvGgPZQOgAf572qhF4FX2NJfeE5dwO7jgn6pJWZZs9QfbrrfIkviDvDwwhl6tMr7t5AbCfp15z1U+YfbIPnbPk0ek9OEW33+Kt6Ru3EOmz++jeNUZk4H73OyqaVJcy8uZImsfyA/e128vow9nTxVxBeh8ftyspRgJC8Z2jBdHt8V7bR1R4uTcwpGEKzJVrleI9Ka/ldB/kopA8vi1ddjbZnnD4debz4grgzPIwx1Z/wTMcdDMR2kn5595gk6leZf/C8vPJVX7zF0PG+amQorNW5sA6XEGObVSbegN5nZaPLEmbeaBlzPI2qdyGM2lmVgucP6Zn2VxBeh4f+BKPZYrZjwjKh4HZPJu8R+IAny4uWCiZkD8mz/X4xpu6Rn0BjHvH6tOt8YRtkT1Qf3p6OPNg1PmpHH7yEsD694g7mBXbyfqXFCfll5h/QP9pY8jDMjO8t/dORxXNVFwMTaxAXYSi6n5WR916L2e6VGR4/b8CFKiSdZwxv52UUqQNvD+bX6yasgHm7Mi/7lO3npyaV18Kks2j78dRsL12+fJxXK4xq9UDyVO0xn4bYzpZcHuV2HVEbevnSYlWOJ7FrTauU5vHiC+Ie1ccbzu/KeukTXUvMOuzFU4LPP6CdbyTb+RidL/ORN4SP7GVIdV7AU9J6A1Um3oCuZ2UTyhJm3q/iqvLsPXZl4CnWgWwMzcio2nktCcLz8KZdWTULMOmMaSfTQbXKYQqLan+yOsHDvQIlRHgefnnE/7+gkEdAnxAJydMlXmZ77v9NkT725SnjC+IOSMr1BsYO3ZUBfUw7Q35Fdfb647Eg/wDv0o1ke68Y9RpL6snoQMZXZeJ89D0rm1CWMPMyZUzjLgWYZHYI2YlJqo+Y/lF/BeGleM1PMHo5xcwXTH/SyKOlHFL9dG+pKngGvnMjGzB13G9rSFRdaZ72eHmNL9qVdZT90hmMTezKeEv6vheebR1FLlHmHzyWV8ybl2nvtWB4G7afq0VPRgczrOVAlYk34L7fwVi2RMsMjz9tDK8bMKnqadVORh9Guo7+CsJLMWNXtv9+QM+07847XPZnmKuphDGm7I+LCbJKA/1DJMAevkPVeO9pdNcRksjsHFKG1LklXpgkcZYYtaedp6NEpmFgONAnpHNIH74D6N9LZMxQ5p/ShpKciaM3L7AnukiqcWTaL089fo+q6oI5tsqjMnE+ep2V7bPKEoYflCjRssQDcMcrisynzBBeZD4oUX8F4aWYtCt7O5QOMPD3cQnSR/q0QPnnmVBcbkCns7IPwGrLbzV/hTXxvd0iL+3KBBuqqqWP9BkH5Z9nQnGZj45nZW/HastvNX+FNfEreGlXJhhQVS19pM84KP88E4rLDdBZ2Q9WW36r+SssimCK065MMKCqWvpIn3FQ/nkmFJf50FnZgdWW32r+CmsimuK0KxMMqKqWPtJnHJR/ngnF5QborOwHqy2/1fwVFoXOyhgoHWCoqpY+0mcclH+eCcVlPnRWdmC15beav8Ka0FkZBaUDDFXV0kf6jIPyzzOhuNwAnZX9YLXlt5q/wqKYc1bmfQeF1348qnZmmBupdj8dgO/PIQOwFRduJ9m8KaJWVe38xtDv4/L8alGb9Cuhs9nf23XcFS9AkntKhphfP579veI1gocUx4s70BmXI8zsOU8ToQ9x5nS7y/4SKhPn41HfV+Z1jpYfoDO2MyQdX/Z49keNTPiF+9++/ARhNGaclZVvNb7fT28mTwL6M/YAY/baroxpZNBeSZSjcpyYp0T0W6Tb7Tm380JF/QrZA6jwrmx+vEIiR3X2XACuebuykJGj9cE8jesQ64zLkfb3iA9iCxqjsJ2uW+wvoTLxBnQ6K5tTlpDzVif1HvG6JcoecmCLmCF79LoJS2DCWdnllfNexct942vvpRg8rzfWpKoWji2FWqKSMIckqpMqTwm8K/NsaLeHr9JyfvE8OO5Dd63d/SptyOl8GeW1m/pURW6M1wiecesZ5B9PZHOi6tSMX6C/aX/1UaM9VZHL+6r9VX9BXISh6HVWNq0sYeYFYz079+yujC97gDGN9zl7Qv4Kwksx9azsklZAutm5vEbeM/aA/ruVDphSg6keylHmX8nhuJoZxxPdlfH6AJ1DDo7WB8e9+hN6t8cd2x8ivPBcQl+2A33S4b5FZ4bT48GGefmHv2daeJ7c2NH2dLHt+LOcomxUmXgDep+VjS5LmHnBWGBPaPklyh5gjHmPfWH8wraF/BWEt2LmWRl577WY7dU0gZnJ9FQ+AlXC+QO+Wj2YDEfLcYUYohUMz+PZw+/KLlRpe4B0Hf0K2QPijncd8+OFqVp0Jl27sEV3re3x6svDS1Ttbzby+Qfz4xagj+lX1IZ2e9p1rt4ffzKhUZk4H93Pysh7r8Vsz5UffP/jr7xuubInZExpf8Ivr3/UX0F4KeadlZVZwGs/PzWpvBaQMqr2VNPTpaVX9cD07FWFRC1hqrFvJHYd28/VaA/p4Gh9MOf8XVlUol46XyJb0pbtpj7M1C1+zYl7L5175R+v5XxVeUL9+9pTtveK13F//OlNjeMiDEfXs7IJZQkzLyhdgD2h5Zcre6Ll1nmWhF8eT8JfQXgrpp2VednHyw5Mi0kIOoN58diSCn+6pwuIXIeqPe082B7md+h55U6jPQxJoybtcc/tysbFy+vj2R8SCoe7bDf1YaZu0adv3DvGy2yM5h+Pig9rlP8ue3rF67g//rzcmPOqTJyPvmdlE8oSZl5QfgB7QssvNy/wq+U+YU/UX0F4KR76OxjLFi/NgYTlvcPmvNF0wFQJTPVQ7ZYg4asingfbw1fVc+zpa0N73G/clUUdbOdJuAbWDy/yLXE/7hvtwX7x+QfzMy05/rvsObecG9O2XaKJ51WZeAPu+x2MZUu1LCHnre5evEe8bi3zlo2kkVG/omWYIHwg3vJ9ZV/FxTB7bpujsDElyXa6zFnAo2q3KjlvT5TK7I9JQmcdXeyJisz4FYpXKO7g/93dEi+GMK1zwjV81toizui497IH61zNP8C1qr+g0TQJ8Ef7d7HnPISMF2kz1tmLizAUj/q+MqYsYfhBZ2xnSLpQ2ROyhCFPDCn73778BGE0ZpyVfQCUDjDwrkyQPtKnBco/z4TicgM6nZV9AFZbfqv5KyyKOWdlb4fSAYaqaukjfcZB+eeZUFzmo+NZ2dux2vJbzV9hTeisjILSAYaqaukjfcZB+eeZUFxugM7KfrDa8lvNX2FR6KyMgdIBhqpq6SN9xkH555lQXOZDZ2UHVlt+q/krrAmdlVFQOsBQVS19pM84KP88E4rLDdBZ2Q9WW36r+SssCp2VMVA6wFBVLX2kzzgo/zwTist86KzswGrLbzV/hTWhszIKSgcYqqqlj/QZh17552kp+mn2RKHPhRugs7IfrLb8VvNXWBRv+b4yrzPD3MJ/PLq0bMXlPcUBIHnIcDYaA3iwnfj7ps79MQ8wJqRbSJ+ozqCnx+PtOsbFa07cqzykSVV9Gl17Ow9fjpzHevwkVdR489FWXNieqJL3QmXifDzq+8q8zrj8KNurnT37ed0YO71RVSrP35AIVXtC/grCSzHjrKx8S/H9fno5eRLQ3zOJ4T9agIgXx3FhhMeGnjL9Q8aQPCVC3yId9Q7Uf7wyXSypdvYe4V3H6HiNi3uVhLn39Enw9LLnaTx8OZKLe3twvelyNoywfARUJt6ATmdlc8oSct7qpB4VKVrCWdNfxs3oXCF7Jq0xQbgRE87KLqnHS0mXe5Cbcq/0uZ3nP1o8BUEhu/1cIACgQ7Q0qVZFJGGiugK7Mm8g791Fz5w4XSwB9mCe6q5jaLzGxZ3RpzSjfC+wPjxPL3uexlPmn+33qxp3szN45P3V44+uH2APpmIUngaVifPR66xsWlnCzAvGmn2OR6RoufKp9Bfoho1vvI/6KwjvxdSzsstrHHq9vUf8Kw1Iqv3Bo9JrUF0xw8/tfBXi9QdVVJqnxPN3ZdivULUH7PF4qj/hOTle43hKfUp3ylm0K8M8Zf4xB1bXD27xjCltM9lM37Eg3lPeznuhMvEG9D4rG12WMPOCsWaf4xEpGjOXaTNQgNGH0YS3R6+bsARmnpWR916L2Y4JzcRR5TE7m+3VQqRaQGy/XzkS0L8vT2nnN/if0OMtKTvz9ozTB9vj8Xi7stHxIhVOx72X1PoJRsxT5p+cMbjFvD/+vNzgdeK1Ay9ydt4LlYnz0f2sjLz3Wsx2UH6Y/Ez/xl2KyR8tk7A+XmeeH/cP+SsIL8W8s7Iys3jt56cmldcC8oVnFZ7u/NRsB6VGWcRUwVdX/Ni9VhjxPMDrcbuyFk2iPC36YB5+V9YrXr30SUTtbHlJW7ab+uR4etnzNJ4y/3jx8u5xy/m69LzYA/hN37Eg3lPeznuhMvEGdD0rm1CWMPMyZYw5CynaZSK+ZPJcM/Xhy7N0/3nLTBDuwrSzsvb0V80a1RQD2BLpAJcUZnWFwVdX/NiqtVEes53/f1M5TcqCLFqZMdryOmN7GH1Gx6v7+oma5Mlihk+7MsxT5h8vXt4933Jpv9gD+E0qLEh1dpLnLqhMnI++Z2UTyhJmXlzGXK4zFSkaUyaRjmDdyHkT/UP+CsJ78dDfwVi2eGnOTBCgP8NPpgOmpOCLCVDi8KWe1z9nBl9mjduVtQuLx47m9PQZHa++62e0SfoJRsxT5h/QeTtd1SACg49HpJHkjMzTkJ1nlye3q0y8Aff9DsaypVqWkPNWtzeeMaRoOWerCoSGR31s8VcQXoy3fF/ZV3ExzMDzqDElQ7WgwZVEtSdPgvuHSDwebMzzd2WMPjlChgefBY2IV8KvRNx7maTvK8PtZf7Zfr/Mp6D/RoT4aIn2rzYCexJ27v4rM7pdZeJ8POr7ypiyhOEHnb2p9+DyM/mr8wIRTCrQM6FbyXb78hOE0ZhxVvYBUDrAwN9XJkgf6dOCMv98cLJ9EfS5cAM6nZV9AFZbfqv5KyyKOWdlb4fSAYaqaukjfcZBu7JnQp8L89HxrOztWG35reavsCZ0VkZB6QBDVbX0kT7joF3ZM6HPhRugs7IfrLb8VvNXWBQ6K2OgdIChqlr6SJ9xUP55JhSX+dBZ2YHVlt9q/gprQmdlFJQOMFRVSx/pMw7KP8+E4nIDdFb2g9WW32r+CotCZ2UMlA4wVFVLH+kzDso/z4TiMh86Kzuw2vJbzV9hTeisjILSAYaqaukjfcZB+eeZUFxugM7KfrDa8lvNX2FRvOX7yrzODHNiSGmM6Zf3FTpeu4e38+j7pqSP9BnHo3LkmVBc5uNR31fmdQblhzkk1Pn8iBStVzkE7MT6MD2r/Ly/gvBezDgrK7MPvt9PLydPAvo3GrMT3yLN3Hv4AJ7qt0i/1C/pI32ewKNy5JlQXG5Ap7OyOWUJOW/HsqQ6aYsIVXu8RtKkXv4Kwosx4azsknq8lHS5T6Q//Eq3jDWpDn+3nwu3e/gAHlxVv9cv6SN9nsCjcuSZUFzmo9dZ2bSyhJm3Y1mCJwXt7felPqW/uL2Xv4LwXkw9K7u8tF775SkgJO898P3NRx9Q7fXiUVUtfaTPOB6VI8+E4nIDep+VjS5LmHlxGVP2OZ6Sonn2MDaHSiyg2OUR6XvOX0F4MWaelZH3XovZXk1nCR6zc9loVlTg3sMH8Ogn0KSP9BnHo3LkmVBc5qP7WRl577WY7aD8MPmr/c15+eXn8TPOkn5VFfOmLm1o91cQ3ot5Z2XgDdzp9Ie74RTD85j9y8bt59qtiqps9/ABPKCqfrVf0kf6PIFH5cgzobjcgK5nZRPKEmbeahljblT45cfY4/UJlViXRmYsz6/XTVgC087K2tNfNQtUU0aC52gpeT6g2uvFo6pa+kifcTwqR54JxWU++p6VTShLmHlH71KAPWaHnD0ez+Wqtrf7KwjvxUN/B2PZ4qUV831m+pNGHi3lkLKiwvcePoBHP4EmfaTPOB6vHNl+LrXf0q4y8Qbc9zsYy5ZomeHxp40hRQP2VN3k7eEdj84V9VcQXoy3fF/ZV3ExzNgSMEU5yvRrO11Mu4e38+j7pqSP9BnHU80/ar+lXWXifDzq+8qYsoThD3U+PyJF88qhMz8jDrCTnAi3Y37eX0F4L2aclX0AlA4wvKpakD7Spx3KP8+E4jIff/35B49fv36pLPkYrOavsCaiKU67MsGAqmrpI33GQfnnmVBc5uP7n4eZ6+vrS7uyT8Jq/gprIpritCsTDKiqlj7SZxyUf54JxWU+jh/dqUK7sg/Dav4KayKa4rQrEwyoqpY+0mcclH+eCcVlPrQrO7Da8lvNX2FNaFdGQekAQ1W19JE+46D880woLvOhXdmB1Zbfav4Ka0K7MgpKBxiqqqWP9BkH5Z9nQnGZD+3KDqy2/FbzV1gT2pVRUDrAUFUtfaTPOCj/PBOKy3ycS5bNurQr+1Ss5q+wJqIpLrkr876DAn83BdOZYU4MKY0x/TorxbR7eDuPvm9K+kifcTwqR54JxWU+Lv+QvP1+hc7K5pQlzJBQ5/MjUjTPHmBnwp52fYA9IX8F4b2IprjvNyW2KyvfOny/n15OngT0bzRmd9LB2V/m3sMH8JhV9Qf4JX2kzxN4VI48E4rLfJQ/3rP9XKGfYJxTlpDzdixLqpNG20P2kPrkbNPrJqyAaIr7flOSu7LLS2u2f/1+lSSJe9OY0FiT6vD3kAy3e/gAHlxVv9cv6SN9nsCjcuSZUFzmw/xPF1tRr/C7stFlCTNvx7IET5po5+95fXKG8f4KwnsRTXHfL8vAXVk5ChCS9x74/uajD6j2evGoqpY+0mccj8qRZ0JxmY9ev+1jWlnCzJsrY/jlF9r8ANuqY0l9cobpdRNWwIzf9sFkHD79XdoxoZlYdyvhJtKfWVGBew8fwKOfQJM+0mccj8qRZ0JxmY/uuzLy3msx20H5YfJ7/RNlidcT8AM7yfIpqk+ic8hfQXgv5u3KztkHt5+fmlRei3fvge9vPtp+rt2qqMp2Dx/AA6rqV/slfaTPE3hUjjwTist89N2VTShLmHlzZQy//BL7n7Nh/Fi+MdfeaxUJwmPxpl1Z9YVn0hnT35y6pPqAaq8Xj6pq6SN9xvGoHHkmFJf5eNquLLQP8fg7liVg0lx7qMQi9Um0h/wVhPfiNT/BWH2Ho/2jxpRUZUWF7z18AI9+Ak36SJ9xPF45sv1car+lXWXifHzXIuQ1+icYmTKDmbdjWVKdNNrO28Prk5au1yoShMcimuK+b274vrLSGoa5ozEm1Xa6mHYPb+fR901JH+kzjqeaf9R+S7vKxPn4FbzMwO0/4ZtQljD8oc7nR6RoXjnUt0zi9UmbNHmxCcJ8RFPc9yuDdmW6dOnSpUuXLl0PucrtgS5dunR9zKVdmS5dunTp0qXrBdfdJZMuXbp0DbzOu7L/B1waUckN6E6hAAAAAElFTkSuQmCC" alt> 此程序返回时，返回地址被覆盖为83EC8B55，此数值在shellcode中，目测是eip没有覆盖准？然后跳转出错。所以先试试准确跳到shellcode中。</p>
+<h2 id="准确进入shellcode"><a href="#准确进入shellcode" class="headerlink" title="准确进入shellcode"></a>准确进入shellcode</h2><p>先找到shellcode的入口点，通过IDA慢慢找，发现程序入口点在CDD处，之后有些定位API和准备需要的127.0.0.1 /shell.dat字符串等操作 直接将返回地址改为shellcode的入口处0012EB69，然后抬高栈顶，然后运行试一试。。 <img src="data:image/png;base64,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" alt> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAI4AAAB2CAIAAACRXjwrAAAFT0lEQVR4nO2dfUxVZRzHz9+9LFu1ctmqqaVD50toacmOTkvLLDU1TTOztCAgVEBC4YYKSoioKAQKikqalqZOU8vUdJLVorqt91aZzt5cra1/b3+cdjicl+c+995zuHwfvp/9dvfcw/P+ub/zHGAMLdzawoAILdzaEiEI/K8q6R8ZRtRoU3VFr/Qre2dcdccLV/fJvKZvVreU7Gv7vXhd/5zrByy8YeCiGwfn3nRXXvfU/JuHLu5xd8EtwwpvHb7ktnuX3j6iqGdacS891Hvky3eOKukzennfMStSHijtN7as/7iVAx5aNXB8+aAJFYMfWZ06sXLIpDVDJ1fdM2XtsKnrhj9efd/0DSNmbEybWaPPqh05+9VRT9WNnlM/Zu7m+59pGDuvcdz8LQ8+t3V8etPDGdsmZO54NKt5YvZrk3J2PrZg15RFr0/N3T0tb8/0xW/OKNj7ROG+WUveerJo/+ziA3NCB58uOTR32eFnV7w9r/TI/LKjz686ll7+TkbF8czV72VVnsiuOpmz9tSC9e8vrD6du+FMXs3Z/NqWgroPXqo/V7jpw6UNHxU1fly89ZNQU2vJ9k+X7fhsefPnpTvDZbu+WLn7y/I9X73yxtcVe7+p3Pftmv3fVR34ft3BH9Yf+rH68E8bj/xcc/R87bFf6t69UH/84qYTlxpO/tp46rctp39vOvPHtrN/bm+53Hzur7iDqqiKqrxVxXQ+6bpOVclUJXk4hUIhqlJClZl65y9eNstUFZAqTdM0TWv3mGe5Ej2rIpHI3//82y0l2/DErAo0q6xubOakVJnwBtgBN0DNQmxnlenJdlaZ1w1V5tsLl9qeaqgqvrPK6SmGG6Atq4y33VPzjYKRVUa5Z1qxUWBWJSGrvFSZWFUZ8AaYnLPK+VhhZpXtrKKqpD0BmlvvfFh3ZpWpio8VAN8CUxWAKjPD+LAeq6qQNPzBUjJV6TFCVfwlCFV1gCpGJ482VRHSiaEqGKgKBqqCgapgoCoYqAoGqoKBqmCgKhioCgaqgoGqYKAqGKgKBqqCgapgoCoYqAoGqoKBqmCgKhioCoaYVZl/sWW76FrHuK61x1nBtY7rWIJWXvORGUs8ukwdma1LkNhUWafoet217NrKedFWEPQjbi6YnnxBZhWCEYMgTlXO614WvZpH3aMEVcU0lnh0r1V0dlXOlJdcpMwn3fVmEjUpxfORHMt5Z5NZhbiyv8SfVTLZ4NXWtb5zi13feu1p1IyRqROHqo7xFPFLlXX7ElQlaCLZXF6nzPTiqxYEvmVVxPuj6iwLmrv2I98q8YJ45oIVBU2iD+uuZVsd86vOTlxTwdaJazVxP659yowlWKl4FVrw2vgtMAxUBQNVwUBVMFAVDFQFA1XBQFUwUBUMVAUDVcFAVTBQFQxUBQNVwUBVMFAVDFQFA1XBQFUwUBUMVAUDVcFAVTBQFQztVDE6eVAVTFAVTFAVTFAVTFAVTFAVTFAVTFAVTFAVTOCpcv6Rr2IopSo5P4YLHl3XFVSV9Gn4HsY/bKYqgFBflbE2v17FfQYxotmz4qoEC5PsynaYRz3eExxR0KfiqnzcqbBb6oQlHjj9mobiqnzZKWcnrs4k28Y9AcVV+bVNZjmgjJEJxVUlvptWK7Zz3nwb9A2QWSXrSWDFa1uDCMVV+ZJVrq9hjxMrCFXMqnhUeWWVVVVAh5niqjrgrHKqCmJF6qvya5vEqly/6nsorsrHjbN1ZUs160Xf74FdJau80gLrtUuoUiaUVRVSEQVV6eqimiq1UUdVlw2qggmqggmqggmqggmqggmqggmqggmqgon/ABCL9Z1FjySHAAAAAElFTkSuQmCC" alt> 直接就出KEY了。。。</p>
+<h2 id="修复Exploit-html"><a href="#修复Exploit-html" class="headerlink" title="修复Exploit.html"></a>修复Exploit.html</h2><p>目测是Exploit.html的返回地址覆盖不准确，稍微修改下即可。 修改是沿着调试的方法直接把eip位置改到一个空白的地方，然后将原来的代码修复，抬高栈顶，然后跳入shellcode入口 <img src="data:image/png;base64,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" alt> <a href="http://yfcnblog-wordpress.stor.sinaapp.com/uploads/2014/07/Exploit_fixed.html" target="_blank" rel="noopener">Exploit_fixed</a> 当时比赛的时候和大神最后3小时都在做这道题，其他都没做……结果还没做出来，真是坑爹啊。。。 看小伙伴们在群里交流，自己又拿出来看了看。。。结果- -更坑爹 题目:<a href="http://yfcnblog-wordpress.stor.sinaapp.com/uploads/2014/07/exploit.zip" target="_blank" rel="noopener">exploit</a></p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/writeups/2nd-360ctf-reverse5-writeup/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                Comment and share
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
     <div class="pagination-bar">
     <ul class="pagination">
         
@@ -1658,7 +1408,7 @@ Full RELRO Canary found NX enabled PIE enabled No RPATH No RUNPATH login
             </a>
           </li>
         
-        <li class="pagination-number">page 1 of 3</li>
+        <li class="pagination-number">page 1 of 2</li>
     </ul>
 </div>
 
